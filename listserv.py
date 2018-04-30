@@ -15,7 +15,7 @@ class ListServ:
 		self.commands = []
 		self.subscribers = []
 
-	def AddSubscribers(self, subscribersFile):
+	def AddFromFile(self, subscribersFile):
 		subscribers = []
 		addEmailList = "QUIET ADD " + self.listName + " DD=USERS IMPORT PW=" + self.password + "\r\n//USERS DD *\r\n"
 		for subscriber in subscribersFile:
@@ -26,6 +26,14 @@ class ListServ:
 				print user[0] + " is not a valid email"
 		addEmailList = addEmailList + "\r\n".join(self.subscribers) + "\r\n/*"
 		self.commands.append(addEmailList)
+	
+	def AddFromEmployees(self, employees):
+		subscribers = []
+		for employee in employees:
+			if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)",employee.email):
+				self.subscribers.append(employee.email)
+		addEmailList = addEmailList + "\r\n".join(self.subscribers) + "\r\n/*"
+                self.commands.append(addEmailList)			
 
 	def ClearSubscribers(self):
 		clearEmailList = "QUIET DELETE " + self.listName + " *@* PW=" + self.password
@@ -70,7 +78,7 @@ def main():
 	if args.deleteList:	
 		listserv.ClearSubscribers()
         if args.addList:
-		listserv.AddSubscribers(args.listFile)
+		listserv.AddFromFile(args.listFile)
 	if listserv.Verify:
 		listserv.Update()
 

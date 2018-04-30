@@ -5,6 +5,8 @@ import argparse
 import configparser
 import sys
 
+from lib import Employee
+
 class ActiveDirectory:
 	def __init__(self, server, domain, account, password, auth, pathRoot):
 		self.server = server
@@ -19,7 +21,7 @@ class ActiveDirectory:
 		self.connection = Connection(adServer, user=self.domain + "\\" + self.account, password=self.password, authentication=self.auth)
 
 	def GetGroupByGuid(self, objectguid):
-		members = []
+		employees = []
 		filter = "(objectGuid=" + objectguid + ")"
 		if self.connection.bind():
 			self.connection.search(search_base=self.pathRoot, 
@@ -32,9 +34,9 @@ class ActiveDirectory:
 				#print('entries exist')
 				if self.connection.entries[0].member:
 					for member in self.connection.entries[0].member:
-						members.append(member.split(',')[0].split('=')[1])
+						employees.append(Employee(member.split(',')[0].split('=')[1]+'@uic.edu'))
 
-					return members
+					return employees
 	
 			else:
 				sys.exit("Group not found")
@@ -57,9 +59,9 @@ def main():
 					config.get('AD','path_root'))
 	activeDirectory.Connect()
 	#adMembers = activeDirectory.GetGroupByGuid('91957082-fc72-4987-82d5-896560930029')
-	adMembers = activeDirectory.GetGroupByGuid(args.groupGuid)
-	for member in adMembers:
-		print(member)
+	employees = activeDirectory.GetGroupByGuid(args.groupGuid)
+	for employee in employees:
+		print(employee.email)
 	
 if __name__=="__main__":
 	main()

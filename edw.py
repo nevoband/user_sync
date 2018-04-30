@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-
 import configparser
 import argparse
 import cx_Oracle
 import smtplib
 import sys
+
+from lib import Employee
 
 class Filters:
 	def __init__(self):
@@ -20,19 +21,6 @@ class Filters:
 
 		self.filterInc += 1
 	
-class Employee:
-	def __init__(self, email, firstName, lastName, middleName):
-		self.email = email
-		self.firstName = firstName
-		self.lastName = lastName
-		self.middleName = middleName
-		self.departments = []
-		self.filters = []
-	
-	def AddDepartment(self, department):
-		self.departments.append(department)
-		
-
 class Edw:
 	def __init__(self, username, password, host, port, database):
 		self.username = username
@@ -132,18 +120,36 @@ def main():
 	parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path ")
 	parser.add_argument("-o", "--org-code", dest="orgCode" , type=str, required=False, help="Organization Code to filter employees by")
 	parser.add_argument("-d", "--col-code", dest="colCode" , type=str, required=True, help="College Code")
+	parser.add_argument("--academic", dest="academicFilter", action="store_true", help="filter only academic positions")
+	parser.add_argument("--staff", dest="staffFilter", action="store_true", help="filter only Staff filter")
+
+	
         args = parser.parse_args()
+
+	#parse the config ini file
 	config = configparser.ConfigParser()
 	config.read(args.configFilePath)
+	
+	#setup EDW connection
 	edw = Edw( config.get('EDW_DB', 'username'), config.get('EDW_DB', 'password'),config.get('EDW_DB', 'host'),config.get('EDW_DB', 'port'),config.get('EDW_DB', 'database'))
 	edw.Connect()
+
+	#filters
 	edw.GetOrganization(args.orgCode)
 	edw.GetCollege(args.colCode)
-	edw.GetStaffUsers()
+
+	if args.staffFilter:
+		edw.GetStaffUsers()
+	
+	if args.academicFilter:
+		edw.getFacultyUsers()
+
+	#print employees
 	employees = edw.GetEmployees()
-	##employees = edw.GetFacultyUsers()
 	for employee in employees:
 		print(employee.email)
+
+	#close connection to EDW
 	edw.CloseConnection()
 
 if __name__ == "__main__":
