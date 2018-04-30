@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 
-from ldap3 import Server, Connection, ALL
+from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute
 import argparse
 import configparser
-
-class ActiveDirectoryGroup:
-	def __init__(self):
-		self.objectGuid = ""
-		self.cn = ""
-		self.dn = ""
-		self.member = []
+import sys
 
 class ActiveDirectory:
 	def __init__(self, server, domain, account, password, auth, pathRoot):
@@ -22,10 +16,11 @@ class ActiveDirectory:
 
 	def Connect(self):
 		adServer = Server(self.server, port=3268, get_info=ALL)
-		self.connection = Connection(adServer, user=self.account, password=self.password, authentication=self.auth)
+		self.connection = Connection(adServer, user=self.domain + "\\" + self.account, password=self.password, authentication=self.auth)
 
 	def GetGroupByGuid(self, objectguid):
-		filter = "(objectGuid=" + self.ad_endian_srch_format(objectuid) + ")"
+		members = []
+		filter = "(objectGuid=" + objectguid + ")"
 		if self.connection.bind():
 			self.connection.search(search_base=self.pathRoot, 
 					search_filter=filter, 
@@ -33,24 +28,24 @@ class ActiveDirectory:
 					attributes = ["objectGuid","cn","distinguishedName", "member"], 
 					size_limit=0)
 			
-			print(self.connection.entries[0].entry_to_json())	
+			if self.connection.entries and len(self.connection.entries) > 0:
+				#print('entries exist')
+				if self.connection.entries[0].member:
+					for member in self.connection.entries[0].member:
+						members.append(member.split(',')[0].split('=')[1])
 
-	def __ad_endian_srch_format(rdGuid):
-		#Var for Return Value
-		fltrGuid = ""
-
-		#Parse into Guid
-		wrkGuid = uuid.UUID('{' + rdGuid + '}')
-
-		for wrkByte in wrkGuid.bytes_le:
-			fltrGuid += "\\" + "{:02x}".format(wrkByte).upper()
-
-		return fltrGuid
-
-
+					return members
+	
+			else:
+				sys.exit("Group not found")
+			 
+		else:
+			sys.exit("Failed to LDAP Bind")
+	
 def main():
 	parser = argparse.ArgumentParser(description="Query Active directory")
-	parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path ")
+	parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path")
+	parser.add_argument("-g", "--guid", dest="groupGuid", type=str, required=True, help="get GUID of group you would like to pull members for")
 	args = parser.parse_args()
 	config = configparser.ConfigParser()
 	config.read(args.configFilePath)
@@ -61,6 +56,10 @@ def main():
 					config.get('AD','authentication'),
 					config.get('AD','path_root'))
 	activeDirectory.Connect()
-
+	#adMembers = activeDirectory.GetGroupByGuid('91957082-fc72-4987-82d5-896560930029')
+	adMembers = activeDirectory.GetGroupByGuid(args.groupGuid)
+	for member in adMembers:
+		print(member)
+	
 if __name__=="__main__":
 	main()
