@@ -1,5 +1,6 @@
 # README #
 
+#### Read the code, do not use blindly this is super alpha code.
 This project is still under construction edw.py, ldap.py and listserv.py are pretty much working
 I wouldn't trust listserv.py though since I haven't fully tested it in production
 Just sharing incase someone wants to write some integration with EDW, Active Directory or ListServs
