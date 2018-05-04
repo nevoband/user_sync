@@ -17,11 +17,20 @@ This README would normally document whatever steps are necessary to get your app
 		* oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm
 		* oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
 * setup cx_Oracle with Python
+	* oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
 * Run either commands to learn more about usage:
-** run edw.py -h
-** run ldap.py -h
-** run listerv.py -h
-* Request access to EDW
+	* run edw.py -h
+	* run ldap.py -h
+	* run listerv.py -h
+* See copy and modify configs from configs folder for each service
+* EDW:
+	* You will need to request acces to the EDW tables:
+		* V_JOB_DETL_HIST_1
+		* V_EMPEE_HIST_1
+		* V_EMPEE_CAMPUS_EMAIL_ADDR
+		* V_EMPEE_PERS_HIST_1 (May depercate this table since you usually don't need first and last name for anything)
+* Listservs
+	* You will need to use your listserv password not your UIC password
 
 ### Contribution guidelines ###
 
