@@ -20,7 +20,7 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm
 		* oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
 * setup cx_Oracle with Python
-	* oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
+	* sudo  pip install cx_Oracle 
 * Run either commands to learn more about usage:
 	* run edw.py -h
 	* run ldap.py -h
