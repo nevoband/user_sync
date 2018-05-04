@@ -42,6 +42,8 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 * Listservs
 	* https://listserv.uic.edu
 	* You will need to use your listserv password not your UIC password
+	* Not password will be sent over postfix in plain text, that's how listserv works unfortunatly 
+	* I think there is an API but it's extermly in efficient and listserv themselves recommend updating via EMail commands
 * Active Directory
 	* Settings for UIC:
 		* server = ad.uic.edu
