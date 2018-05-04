@@ -1,6 +1,8 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+This project is still under construction edw.py, ldap.py and listserv.py are pretty much working
+I wouldn't trust listserv.py though since I haven't fully tested it in production
+Just sharing incase someone wants to write some integration with EDW, Active Directory or ListServs
 
 ### What is this repository for? ###
 
