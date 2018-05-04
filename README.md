@@ -34,6 +34,14 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* V_EMPEE_PERS_HIST_1 (May depercate this table since you usually don't need first and last name for anything)
 * Listservs
 	* You will need to use your listserv password not your UIC password
+* Active Directory
+	* Settings for UIC:
+		* server = ad.uic.edu
+		* somain = AD
+		* account = (Read only service account with access only to groups you want to read)
+		* password = (AD password for service account)
+		* authentication = NTLM
+		* path_root = ou=pharm,ou=depts,dc=ad,dc=uic,dc=edu
 
 ### Contribution guidelines ###
 
