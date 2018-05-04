@@ -13,9 +13,9 @@ This README would normally document whatever steps are necessary to get your app
 
 * Clone this repo to your computer
 * Install the oracle client http://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html
-** For linux download:
-*** oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm
-*** oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
+	* For linux download:
+		* oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm
+		* oracle-instantclient12.2-devel-12.2.0.1.0-1.x86_64.rpm 
 * setup cx_Oracle with Python
 * Run either commands to learn more about usage:
 ** run edw.py -h
