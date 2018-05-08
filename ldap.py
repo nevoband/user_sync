@@ -7,7 +7,7 @@ import sys
 
 from lib import Employee
 
-class ActiveDirectory:
+class Ldap:
 	def __init__(self, server, domain, account, password, auth, pathRoot):
 		self.server = server
 		self.domain = domain
@@ -43,6 +43,8 @@ class ActiveDirectory:
 			 
 		else:
 			sys.exit("Failed to LDAP Bind")
+	def CloseConnection(self):
+		self.connection.unbind()
 	
 def main():
 	parser = argparse.ArgumentParser(description="Query Active directory")
@@ -51,15 +53,16 @@ def main():
 	args = parser.parse_args()
 	config = configparser.ConfigParser()
 	config.read(args.configFilePath)
-	activeDirectory = ActiveDirectory(config.get('AD','server'),
+	ldap = Ldap(config.get('AD','server'),
 					config.get('AD','domain'),
 					config.get('AD','account'),
 					config.get('AD','password'),
 					config.get('AD','authentication'),
 					config.get('AD','path_root'))
-	activeDirectory.Connect()
-	#adMembers = activeDirectory.GetGroupByGuid('91957082-fc72-4987-82d5-896560930029')
-	employees = activeDirectory.GetGroupByGuid(args.groupGuid)
+	ldap.Connect()
+	#adMembers = ldap.GetGroupByGuid('91957082-fc72-4987-82d5-896560930029')
+	employees = ldap.GetGroupByGuid(args.groupGuid)
+	ldap.CloseConnection()
 	for employee in employees:
 		print(employee.email)
 	

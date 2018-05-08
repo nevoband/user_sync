@@ -40,26 +40,26 @@ class Edw:
 
 		self.edwCursor = self.edwDB.cursor()
 
-	def GetCollege(self, collegeCode ):
+	def FilterCollege(self, collegeCode ):
 		collegeConditional = "V_JOB_DETL_HIST_1.JOB_DETL_COLL_CD = :coll_code"
 		collegeFilterDict = { "coll_code":collegeCode }
 		self.filters.AddFilter(collegeConditional, collegeFilterDict)
 
-	def GetFacultyUsers(self):
+	def FilterFaculty(self):
 		facultyConditional = "(\
                              	V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'A%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD = 'HA' OR\
                              	V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'P%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'R%'\
                             	)"
 		self.filters.AddFilter(facultyConditional)
 
-	def GetStaffUsers(self):
+	def FilterStaff(self):
 		staffConditional = "( \
 			       V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'B%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'C%' OR \
 			       V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'D%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'E%'\
 			      )"
 		self.filters.AddFilter(staffConditional)
 
-	def GetOrganization(self, orgCodeFilter):
+	def FilterOrganization(self, orgCodeFilter):
 		orgConditional = "V_JOB_DETL_HIST_1.ORG_CD = :org_code_" + str(self.filters.filterInc)
 		orgFilterDict = { "org_code_" + str(self.filters.filterInc):orgCodeFilter }
 		self.filters.AddFilter(orgConditional, orgFilterDict)
@@ -135,14 +135,14 @@ def main():
 	edw.Connect()
 
 	#filters
-	edw.GetOrganization(args.orgCode)
-	edw.GetCollege(args.colCode)
+	edw.FilterOrganization(args.orgCode)
+	edw.FilterCollege(args.colCode)
 
 	if args.staffFilter:
-		edw.GetStaffUsers()
+		edw.FilterStaff()
 	
 	if args.academicFilter:
-		edw.getFacultyUsers()
+		edw.FilterFaculty()
 
 	#print employees
 	employees = edw.GetEmployees()

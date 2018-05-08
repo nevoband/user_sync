@@ -10,3 +10,9 @@ class Employee:
 
         def AddDepartment(self, department):
                 self.departments.append(department)
+
+	def __eq__(self, other):
+		return (self is other) or (self.netid ==other.netid)
+
+	def __hash__(self):
+		return hash(self.netid)
