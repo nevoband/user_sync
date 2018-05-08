@@ -17,11 +17,17 @@ class Employees:
         self.employeeTypeFilter = None
 	self.edwEmployees = None
 	self.ldapEmployees = None
+        self.sender = None
+        self.recipient = None
 
     def MissingFromLdap(self):
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
 	for employee in missing:
-            print("missing: " + employee.netid)
+            print("off-board: " + employee.netid)
+    def MissingFromEdw(self):
+        missing = set(self.ldapEmployees) - set(self.edwEmployees)
+        for employee in missing:
+            print("on-board: " + employee.netid)
 
     def LoadEmployees(self):
         self.LoadEdwEmployees()
@@ -58,15 +64,31 @@ class Employees:
         self.edw.CloseConnection()
         self.ldap.CloseConnection()
 
+    def Notify():
+        commands = "\r\n".join(self.commands)
+        msg = MIMEText(commands ,"plain")
+        msg["Subject"] = "auto script"
+        msg["FROM"] = self.sender
+        msg["To"] = self.recipient
+        if self.debug:
+            print msg.as_string()
+        else:
+            print "sending email"
+            s = smtplib.SMTP("localhost")
+            s.sendmail(self.sender, self.recipient, msg.as_string())
+            s.quit()
+
 def main():
     parser = argparse.ArgumentParser(description="Compare EDW to Active Directory Group")
     parser.add_argument("-d", "--edw-config", dest="edwConfigFile", type=str, required=True, help="Config file for EDW connection")
     parser.add_argument("-a", "--ad-config", dest="adConfigFile", type=str, required=True, help="Config file for AD connection")
+    parser.add_argument("-n", "--notify-config", dest="notifyConfig", type=str, required=True, help="Config file for notification recipients")
     parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=True, help="GUID number for AD group to compare")
     parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False, help="Organization code to filter on optional")
     parser.add_argument("-c", "--col-code", dest="edwColCode", type=str, required=True, help="College Code EX: pharmacy is FX")
     parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="filter only academic positions")
     parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="filter only Staff filter")
+    parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger a notification to recipients in the notify config file")
     args = parser.parse_args()
 
     employees = Employees()
@@ -108,6 +130,9 @@ def main():
             
     employees.LoadEmployees()
     employees.MissingFromLdap()
+    employees.MissingFromEdw()
+    
+    employees.CloseConnections()
 
 if __name__ == "__main__":
     main()
