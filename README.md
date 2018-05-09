@@ -22,9 +22,10 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 * setup cx_Oracle with Python
 	* sudo  pip install cx_Oracle 
 * Run either commands to learn more about usage:
-	* run edw.py -h
-	* run ldap.py -h
-	* run listerv.py -h
+	* run ./edw.py -h
+	* run ./ldap.py -h
+	* run ./listerv.py -h
+	* run ./employees.py -h
 * See copy and modify configs from configs folder for each service
 * EDW:
 	* https://www.aits.uillinois.edu/access/get_access/get_data_warehouse_access
