@@ -18,8 +18,8 @@ class Employees:
         self.orgCode = None
         self.collegeCode = None
         self.employeeTypeFilter = None
-	self.edwEmployees = None
-	self.ldapEmployees = None
+        self.edwEmployees = None
+        self.ldapEmployees = None
         self.sender = None
         self.recipient = None
         self.message = []
@@ -27,8 +27,9 @@ class Employees:
 
     def MissingFromLdap(self):
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
-	for employee in missing:
+        for employee in missing:
             self.message.append( "off-board: " + employee.netid)
+
     def MissingFromEdw(self):
         missing = set(self.ldapEmployees) - set(self.edwEmployees)
         for employee in missing:
@@ -39,12 +40,12 @@ class Employees:
         self.LoadLdapEmployees()
  
     def LoadEdwEmployees(self):
-	#filters
+        #filters
         if self.orgCode is not None:
-                self.edw.FilterOrganization(self.orgCode)
+            self.edw.FilterOrganization(self.orgCode)
 
         self.edw.FilterCollege(self.colCode)
-	
+    
         if self.employeeTypeFilter == "Staff":
             self.edw.FilterStaff()
         elif self.employeeTypeFilter == "Academic":
@@ -58,7 +59,7 @@ class Employees:
  
     def ConnectLdap(self,server,domain,account,password,authentication,path_root):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
-	self.ldap.Connect()
+        self.ldap.Connect()
 
     def ConnectEDW(self, username, password, host, port, database):
         #setup EDW connection
@@ -75,6 +76,7 @@ class Employees:
         msg["Subject"] = "auto script"
         msg["FROM"] = self.sender
         msg["To"] = self.recipient
+
         if self.debug:
             print msg.as_string()
         else:
