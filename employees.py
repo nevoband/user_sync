@@ -28,12 +28,17 @@ class Employees:
     def MissingFromLdap(self):
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
         for employee in missing:
-            self.message.append( "off-board: " + employee.netid)
+            self.message.append( "on-board: " + employee.netid)
 
     def MissingFromEdw(self):
         missing = set(self.ldapEmployees) - set(self.edwEmployees)
         for employee in missing:
-            self.message.append("on-board: " + employee.netid)
+            self.message.append("off-board: " + employee.netid)
+            ldapMembership = self.ldap.GetMembership(employee.netid)
+            if len(ldapMembership) > 0:
+                self.message.append("\t* Remove From:")
+                for group in ldapMembership:
+                   self.message.append("\t\t- " + str(group)) 
 
     def LoadEmployees(self):
         self.LoadEdwEmployees()
@@ -57,8 +62,9 @@ class Employees:
     def LoadLdapEmployees(self):
         self.ldapEmployees = self.ldap.GetGroupByGuid(self.ldapGuid)
  
-    def ConnectLdap(self,server,domain,account,password,authentication,path_root):
+    def ConnectLdap(self,server,domain,account,password,authentication,path_root, user_dn):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
+        self.ldap.user_dn = user_dn
         self.ldap.Connect()
 
     def ConnectEDW(self, username, password, host, port, database):
@@ -111,8 +117,9 @@ def main():
         adConfig.get('AD','account'),
         adConfig.get('AD','password'),
         adConfig.get('AD','authentication'),
-        adConfig.get('AD','path_root'))
-   
+        adConfig.get('AD','path_root'),
+        adConfig.get('AD','user_dn'))
+
     edwConfig.read(args.edwConfigFile)
     employees.ConnectEDW(edwConfig.get('EDW_DB', 'username'), 
         edwConfig.get('EDW_DB', 'password'),
