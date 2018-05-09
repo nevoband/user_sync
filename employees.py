@@ -2,6 +2,9 @@
 
 import argparse
 import configparser
+import smtplib
+
+from email.mime.text import MIMEText
 
 from edw import Edw
 from edw import Filters
@@ -19,15 +22,17 @@ class Employees:
 	self.ldapEmployees = None
         self.sender = None
         self.recipient = None
+        self.message = []
+        self.debug = False
 
     def MissingFromLdap(self):
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
 	for employee in missing:
-            print("off-board: " + employee.netid)
+            self.message.append( "off-board: " + employee.netid)
     def MissingFromEdw(self):
         missing = set(self.ldapEmployees) - set(self.edwEmployees)
         for employee in missing:
-            print("on-board: " + employee.netid)
+            self.message.append("on-board: " + employee.netid)
 
     def LoadEmployees(self):
         self.LoadEdwEmployees()
@@ -64,8 +69,8 @@ class Employees:
         self.edw.CloseConnection()
         self.ldap.CloseConnection()
 
-    def Notify():
-        commands = "\r\n".join(self.commands)
+    def Notify(self):
+        commands = "\r\n".join(self.message)
         msg = MIMEText(commands ,"plain")
         msg["Subject"] = "auto script"
         msg["FROM"] = self.sender
@@ -88,14 +93,16 @@ def main():
     parser.add_argument("-c", "--col-code", dest="edwColCode", type=str, required=True, help="College Code EX: pharmacy is FX")
     parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="filter only academic positions")
     parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="filter only Staff filter")
-    parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger a notification to recipients in the notify config file")
+    parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger a notification to recipients added to the notify config file")
+    parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
     args = parser.parse_args()
 
     employees = Employees()
 
     edwConfig = configparser.ConfigParser()
     adConfig = configparser.ConfigParser()
-    
+    notifyConfig = configparser.ConfigParser()
+
     adConfig.read(args.adConfigFile)
     employees.ConnectLdap(adConfig.get('AD','server'),
         adConfig.get('AD','domain'),
@@ -110,7 +117,7 @@ def main():
         edwConfig.get('EDW_DB', 'host'),
         edwConfig.get('EDW_DB', 'port'),
         edwConfig.get('EDW_DB', 'database'))
-    
+     
     if args.ldapGroupGuid:
         employees.ldapGuid = args.ldapGroupGuid
 
@@ -127,11 +134,20 @@ def main():
             employees.employeeTypeFilter = "Academic"
         if args.edwStaffFilter:
             employees.employeeTypeFilter = "Staff"
-            
+
+    if args.debug:
+        employees.debug = args.debug
+
     employees.LoadEmployees()
     employees.MissingFromLdap()
     employees.MissingFromEdw()
-    
+
+    if args.notify and args.notifyConfig:
+        notifyConfig.read(args.notifyConfig)
+        employees.sender = notifyConfig.get('NOTIFY','sender')
+        employees.recipient = notifyConfig.get('NOTIFY', 'recipients') 
+        employees.Notify()
+
     employees.CloseConnections()
 
 if __name__ == "__main__":
