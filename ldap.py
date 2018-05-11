@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute
-from ldap3.utils.conv import escape_filter_chars
 import argparse
 import configparser
 import sys
 
+from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute
+from ldap3.utils.conv import escape_filter_chars
+
 from lib import Employee
 
 class Ldap:
+
     def __init__(self, server, domain, account, password, auth, pathRoot):
         self.server = server
         self.domain = domain
@@ -17,10 +19,37 @@ class Ldap:
         self.auth = auth
         self.pathRoot = pathRoot
         self.user_dn = None
+        self.debug = False
 
     def Connect(self):
         adServer = Server(self.server, port=3268, get_info=ALL)
         self.connection = Connection(adServer, user=self.domain + "\\" + self.account, password=self.password, authentication=self.auth)
+
+    def Exists(self, netid):
+        if self.GetEmployee(netid, True):
+            return True
+
+        return False
+
+    def GetEmployee(self, netid, existance = None):
+
+        filter = "(&(objectClass=user)(sAMAccountName=" + netid + "))"
+
+        if self.connection.bind():
+            self.connection.search(search_base=self.user_dn,
+            search_filter=filter,
+            search_scope=SUBTREE,
+            attributes = [ALL_ATTRIBUTES], size_limit=0)
+            if self.connection.entries and len(self.connection.entries) > 0:
+                if existance:
+                    return True
+                employee = Employee(self.connection.entries[0].mail,self.connection.entries[0].givenName, self.connection.entries[0].sn
+                )
+                if self.debug:
+                    print(self.connection.entries)
+                return employee
+
+        return False
 
     def GetMembership(self,netid):
         groups = []
@@ -39,7 +68,7 @@ class Ldap:
 
     def GetGroupByGuid(self, objectguid):
         employees = []
-        filter = "(objectGuid=" + objectguid + ")"
+        filter = "(objectGuid=" + str(objectguid) + ")"
         if self.connection.bind():
             self.connection.search(search_base=self.pathRoot, 
             search_filter=filter, 
@@ -48,6 +77,7 @@ class Ldap:
             
             if self.connection.entries and len(self.connection.entries) > 0:
                 #print('entries exist')
+                #print(self.connection.entries)
                 if self.connection.entries[0].member:
                     for member in self.connection.entries[0].member:
                         employee = Employee(member.split(',')[0].split('=')[1]+'@uic.edu')
@@ -67,8 +97,10 @@ class Ldap:
 def main():
     parser = argparse.ArgumentParser(description="Query Active directory")
     parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path")
-    parser.add_argument("-g", "--guid", dest="groupGuid", type=str, required=True, help="get GUID of group you would like to pull members for")
-    parser.add_argument("-n", "--netid", dest="netid", type=str, required=True, help="get all groups this netid is a member of")
+    parser.add_argument("-g", "--guid", dest="groupGuid", type=str, required=False, help="get GUID of group you would like to pull members for")
+    parser.add_argument("-n", "--netid", dest="netid", type=str, required=False, help="if GUID is provided get all groups this netid is a member of otherwise get get ldap info of user")
+    parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
+
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
@@ -80,16 +112,27 @@ def main():
                 config.get('AD','password'),
                 config.get('AD','authentication'),
                 config.get('AD','path_root'))
-
+    
     ldap.user_dn = config.get('AD','user_dn')
 
     ldap.Connect()
-    #adMembers = ldap.GetGroupByGuid('91957082-fc72-4987-82d5-896560930029')
+
+    if args.debug:
+        ldap.debug = args.debug
 
     if args.netid:
-        ldap.GetMembership(args.netid)
+        if ldap.Exists(args.netid):
+            if args.groupGuid:
+                ldap.GetMembership(args.netid)
+            ldap.GetEmployee(args.netid)
+        else:
+            print("No AD account exists for: " + args.netid)
+    else:
+        if args.groupGuid:
+            employees = ldap.GetGroupByGuid(args.groupGuid)
+    if args.netid:
+        ldap.Exists(args.netid)
 
-    employees = ldap.GetGroupByGuid(args.groupGuid)
     ldap.CloseConnection()
         
     #for employee in employees:

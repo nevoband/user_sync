@@ -68,7 +68,7 @@ class Edw:
         employees = []
         if self.filters.conditionals > 0:    
             queryEmployees = "SELECT\
-                    DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME\
+                    DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
                 FROM\
                     V_JOB_DETL_HIST_1,\
                     V_EMPEE_HIST_1,\
@@ -109,7 +109,9 @@ class Edw:
             sys.exit("no conditionals set")
 
         for employeeAttrib in self.edwCursor:
-            employees.append(Employee(employeeAttrib[0], employeeAttrib[1], employeeAttrib[2], employeeAttrib[3]))
+            employee = Employee(employeeAttrib[0], employeeAttrib[1], employeeAttrib[2], employeeAttrib[3])
+            employee.firstDay = employeeAttrib[4]
+            employees.append(employee)
         return employees        
 
     def CloseConnection(self):
@@ -149,7 +151,7 @@ def main():
     #print employees
     employees = edw.GetEmployees()
     for employee in employees:
-        print(employee.netid)
+        print(employee.netid +";")
 
     #close connection to EDW
     edw.CloseConnection()

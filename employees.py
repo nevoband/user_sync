@@ -28,7 +28,8 @@ class Employees:
     def MissingFromLdap(self):
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
         for employee in missing:
-            self.message.append( "on-board: " + employee.netid)
+            if self.ldap.Exists(employee.netid):
+                self.message.append( "on-board: " + employee.email)
 
     def MissingFromEdw(self):
         missing = set(self.ldapEmployees) - set(self.edwEmployees)
@@ -61,7 +62,7 @@ class Employees:
 
     def LoadLdapEmployees(self):
         self.ldapEmployees = self.ldap.GetGroupByGuid(self.ldapGuid)
- 
+    
     def ConnectLdap(self,server,domain,account,password,authentication,path_root, user_dn):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
         self.ldap.user_dn = user_dn
