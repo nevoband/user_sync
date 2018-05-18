@@ -26,6 +26,7 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 	* run ./ldap.py -h
 	* run ./listerv.py -h
 	* run ./employees.py -h
+		* Example: ./employees.py --edw-config /home/nevoband/configs/db_config.ini --ad-config /home/nevoband/configs/ad_config.ini --notify-config /home/nevoband/configs/notify_config.ini --col-code FX --ad-guid 80120a64-6725-4896-9829-e57d65ba1a28 --notify
 * See copy and modify configs from configs folder for each service
 * EDW:
 	* https://www.aits.uillinois.edu/access/get_access/get_data_warehouse_access
