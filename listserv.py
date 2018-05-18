@@ -6,6 +6,7 @@ import re
 from email.mime.text import MIMEText
 
 class ListServ:
+
     def __init__(self, server, listName, owner, password, debug):
         self.server = server
         self.owner = owner
