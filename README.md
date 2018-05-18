@@ -8,7 +8,7 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 ### What is this repository for? ###
 
 * Scripts to query UIC EDW and Active Directory
-* Can be used to compare AD group to EDW queries based on Academic/Staff positions and Orgnizational codes
+* Can be used to compare AD group to EDW queries based on Academic/Staff positions and Organizational codes
 * Version (0.4)
 * [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
@@ -30,11 +30,11 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 * See copy and modify configs from configs folder for each service
 * EDW:
 	* https://www.aits.uillinois.edu/access/get_access/get_data_warehouse_access
-	* You will need to request acces to the EDW tables:
+	* You will need to request access to the EDW tables:
 		* V_JOB_DETL_HIST_1
 		* V_EMPEE_HIST_1
 		* V_EMPEE_CAMPUS_EMAIL_ADDR
-		* V_EMPEE_PERS_HIST_1 (May depercate this table since you usually don't need first and last name for anything)
+		* V_EMPEE_PERS_HIST_1 (May deprecate this table since you usually don't need first and last name for anything)
 	* Settings for EDW:
 		* database = DSPROD01
 		* username = (Your assigned EDW username, or service account password)
@@ -44,12 +44,12 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 * Listservs
 	* https://listserv.uic.edu
 	* You will need to use your listserv password not your UIC password
-	* Not password will be sent over postfix in plain text, that's how listserv works unfortunatly 
-	* I think there is an API but it's extermly in efficient and listserv themselves recommend updating via EMail commands
+	* Not password will be sent over postfix in plain text, that's how listserv works unfortunately 
+	* I think there is an API but it's extremly in efficient and listserv themselves recommend updating via EMail commands
 * Active Directory
 	* Settings for UIC:
 		* server = ad.uic.edu
-		* somain = AD
+		* domain = AD
 		* account = (Read only service account with access only to groups you want to read)
 		* password = (AD password for service account)
 		* authentication = NTLM
