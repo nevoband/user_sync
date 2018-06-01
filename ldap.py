@@ -8,6 +8,7 @@ from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BA
 from ldap3.utils.conv import escape_filter_chars
 
 from lib import Employee
+from lib import Group
 
 class Ldap:
 
@@ -67,6 +68,7 @@ class Ldap:
         return groups
 
     def GetGroupByGuid(self, objectguid):
+        group = "test"
         employees = []
         filter = "(objectGuid=" + str(objectguid) + ")"
         if self.connection.bind():
@@ -74,23 +76,38 @@ class Ldap:
             search_filter=filter, 
             search_scope=SUBTREE,
             attributes = ["objectGuid","cn","distinguishedName", "member"], size_limit=0)
-            
-            if self.connection.entries and len(self.connection.entries) > 0:
+            if self.connection.entries and len(self.connection.entries) > 0:    
                 #print('entries exist')
-                #print(self.connection.entries)
+                print(self.connection.entries)
                 if self.connection.entries[0].member:
+                    group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
                     for member in self.connection.entries[0].member:
                         employee = Employee(member.split(',')[0].split('=')[1]+'@uic.edu')
                         employee.dn = member
-                        employees.append(employee)
+                        group.AddEmployee(employee)
 
-                    return employees
+                    return group
     
             else:
                 sys.exit("Group not found")
              
         else:
+            print("request" + str(self.connection.request))
+            print("response" + str(self.connection.response))
             sys.exit("Failed to LDAP Bind")
+
+    def AddUsersToGroup(self, employees, objectguid):
+        if self.connection.bind():
+            dns = (employee.dn for employee in employees)
+            group = self.GetGroupByGuid(objectguid)
+            self.connection.modify(group.dn, {'member': [(MODIFY_ADD,dns)]})
+
+    def DeleteUsersFromGroup(self, employees, objectguid):
+        if self.connection.bind():
+            dns = for employee in employees)
+            group = self.GetGroupByGuid(objectguid)
+            slef.connection.modify(group.dn, {'member': [(MODIFY_DELETE,dns)]})
+
     def CloseConnection(self):
         self.connection.unbind()
     
@@ -100,7 +117,8 @@ def main():
     parser.add_argument("-g", "--guid", dest="groupGuid", type=str, required=False, help="get GUID of group you would like to pull members for")
     parser.add_argument("-n", "--netid", dest="netid", type=str, required=False, help="if GUID is provided get all groups this netid is a member of otherwise get get ldap info of user")
     parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
-
+    parser.add_argument("--add-users", dest="addUsers", action="store_true")
+    parser.add_argument("--delete-users", dest="delUsers", action="store_true")
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
@@ -129,7 +147,8 @@ def main():
             print("No AD account exists for: " + args.netid)
     else:
         if args.groupGuid:
-            employees = ldap.GetGroupByGuid(args.groupGuid)
+            group = ldap.GetGroupByGuid(args.groupGuid)
+            print(str(group.dn))
     if args.netid:
         ldap.Exists(args.netid)
 
