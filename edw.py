@@ -29,6 +29,7 @@ class Edw:
         self.port = port
         self.database = database
         self.filters = Filters()
+        self.gracePeriodDays = 0
 
     def Connect(self):
 
@@ -66,7 +67,8 @@ class Edw:
         
     def GetEmployees(self):
         employees = []
-        if self.filters.conditionals > 0:    
+        if self.filters.conditionals > 0:
+            self.filters.filterDict.update({'grace_period':self.gracePeriodDays})
             queryEmployees = "SELECT\
                     DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
                 FROM\
@@ -81,11 +83,9 @@ class Edw:
                       AND\
                     V_JOB_DETL_HIST_1.EDW_PERS_ID = V_EMPEE_PERS_HIST_1.EDW_PERS_ID\
                       AND\
-                    V_EMPEE_HIST_1.ACTIVE_EMPEE_IND = 'Y'\
-                      AND\
                     V_EMPEE_HIST_1.EMPEE_CUR_INFO_IND = 'Y'\
                       AND\
-                    V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'A'\
+                    (V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'A' OR (V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'T' AND V_EMPEE_HIST_1.LAST_WORK_DT >= TRUNC(SYSDATE) - :grace_period ))\
                       AND\
                     V_EMPEE_HIST_1.EMPEE_DATA_STATUS_DESC = 'Current'\
                       AND\
@@ -93,13 +93,13 @@ class Edw:
                       AND\
                     V_JOB_DETL_HIST_1.JOB_DETL_DATA_STATUS_DESC = 'Current'\
                       AND\
-                    V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Active'\
+                    (V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Active' OR V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Terminated')\
                       AND\
                         V_EMPEE_PERS_HIST_1.PERS_CUR_INFO_IND = 'Y'\
                       AND\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_UI_RPT_IND = 'Y'\
                       AND\
-                               V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_STATUS_IND = 'A'\
+                    V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_STATUS_IND = 'A'\
                       AND\
                     " + ' AND '.join(self.filters.conditionals) + "\
                 ORDER BY\
@@ -122,6 +122,7 @@ def main():
     parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path ")
     parser.add_argument("-o", "--org-code", dest="orgCode" , type=str, required=False, help="Organization Code to filter employees by")
     parser.add_argument("-d", "--col-code", dest="colCode" , type=str, required=True, help="College Code")
+    parser.add_argument("-p", "--grace-period", dest="grace", type=int, required=False, help="Grace period in days after a person is terminated to still pull them as active")
     parser.add_argument("--academic", dest="academicFilter", action="store_true", help="filter only academic positions")
     parser.add_argument("--staff", dest="staffFilter", action="store_true", help="filter only Staff filter")
 
@@ -135,6 +136,10 @@ def main():
     #setup EDW connection
     edw = Edw( config.get('EDW_DB', 'username'), config.get('EDW_DB', 'password'),config.get('EDW_DB', 'host'),config.get('EDW_DB', 'port'),config.get('EDW_DB', 'database'))
     edw.Connect()
+    
+    #set grace period if user requested
+    if args.grace:
+        edw.gracePeriodDays = args.grace
 
     #filters
     if args.orgCode:

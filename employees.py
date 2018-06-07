@@ -61,7 +61,7 @@ class Employees:
         self.edwEmployees = self.edw.GetEmployees()
 
     def LoadLdapEmployees(self):
-        self.ldapEmployees = self.ldap.GetGroupByGuid(self.ldapGuid)
+        self.ldapEmployees = self.ldap.GetEmployeesByGuid(self.ldapGuid)
     
     def ConnectLdap(self,server,domain,account,password,authentication,path_root, user_dn):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
@@ -97,11 +97,14 @@ def main():
     parser.add_argument("-d", "--edw-config", dest="edwConfigFile", type=str, required=True, help="Config file for EDW connection")
     parser.add_argument("-a", "--ad-config", dest="adConfigFile", type=str, required=True, help="Config file for AD connection")
     parser.add_argument("-n", "--notify-config", dest="notifyConfig", type=str, required=True, help="Config file for notification recipients")
-    parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=True, help="GUID number for AD group to compare")
-    parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False, help="Organization code to filter on (optional)")
-    parser.add_argument("-c", "--col-code", dest="edwColCode", type=str, required=True, help="College Code EX: pharmacy is FX")
-    parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="filter only academic positions")
-    parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="filter only Staff positions")
+    parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=True, help="Acive Dirctory GUID number for AD group to compare")
+    parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False, help="Filter by EDW Organization code (optional)")
+    parser.add_argument("-c", "--col-code", dest="edwColCode", type=str, required=True, help="EDW College Code EX: pharmacy is FX")
+    parser.add_argument("-p", "--grace-period", dest="grace", type=int, required=False, help="Grace period in days to apply to terminated employees to still appear as active")
+
+    parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="Filter only academic positions")
+    parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="Filter only Staff positions")
+    parser.add_argument("--sync", dest="syncUsers", action="store_true", help="Write EDW employees results differences to Active Directory group")
     parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger an on-boarding off-boarding notification to recipients added to the notify config file")
     parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
     args = parser.parse_args()
