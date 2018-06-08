@@ -36,7 +36,7 @@ class Edw:
         try: 
             self.edwDB = cx_Oracle.connect(self.username, self.password, self.host + ':' + self.port + '/' + self.database)
         except cx_Oracle.DatabaseError as e:
-            print(e)        
+            print("Database connection error: "+ str(e))
             raise
 
         self.edwCursor = self.edwDB.cursor()
@@ -104,7 +104,11 @@ class Edw:
                     " + ' AND '.join(self.filters.conditionals) + "\
                 ORDER BY\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR"
-            self.edwCursor.execute(queryEmployees, self.filters.filterDict)
+            try:
+                self.edwCursor.execute(queryEmployees, self.filters.filterDict)
+            except cx_Oracle.DatabaseError as e:
+                print("Database execution error: " + str(e))
+                raise
         else:
             sys.exit("no conditionals set")
 
@@ -115,7 +119,11 @@ class Edw:
         return employees        
 
     def CloseConnection(self):
-        self.edwDB.close()
+        try:
+            self.edwCursor.close()
+            self.edwDB.close()
+        except cx_Oracle.DatabaseError:
+            pass
         
 def main():
     parser = argparse.ArgumentParser(description="Update listserv subscribers from a text file")
@@ -154,12 +162,14 @@ def main():
         edw.FilterFaculty()
 
     #print employees
-    employees = edw.GetEmployees()
-    for employee in employees:
-        print(employee.netid +";")
-
-    #close connection to EDW
-    edw.CloseConnection()
+    try:
+        #print employees 
+        employees = edw.GetEmployees()
+        for employee in employees:
+            print(employee.netid +";")
+    finally:
+        #close connection to EDW
+        edw.CloseConnection()
 
 if __name__ == "__main__":
     main()

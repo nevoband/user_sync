@@ -5,7 +5,7 @@ import configparser
 import sys
 import logging
 
-from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE
+from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE, LDAPException
 from ldap3.utils.conv import escape_filter_chars
 
 from lib import Employee
@@ -25,7 +25,11 @@ class Ldap:
 
     def Connect(self):
         adServer = Server(self.server, get_info=ALL)
-        self.connection = Connection(adServer, user=self.domain + "\\" + self.account, password=self.password, authentication=self.auth)
+        self.connection = Connection(adServer, user=self.domain + "\\" + self.account, password=self.password, authentication=self.auth, raise_exceptions=True)
+        try:
+            self.connection.bind()
+        except LDAPException as e:
+            raise 
 
     def Exists(self, netid):
         if self.GetEmployee(netid, True):
@@ -33,23 +37,18 @@ class Ldap:
 
         return False
 
-    def GetEmployee(self, netid, existance = None):
-
+    def GetEmployee(self, netid):
         filter = "(&(objectClass=user)(sAMAccountName=" + netid + "))"
-
-        if self.connection.bind():
-            self.connection.search(search_base=self.user_dn,
-            search_filter=filter,
-            search_scope=SUBTREE,
-            attributes = [ALL_ATTRIBUTES], size_limit=0)
-            if self.connection.entries and len(self.connection.entries) > 0:
-                if existance:
-                    return True
-                employee = Employee(self.connection.entries[0].mail,self.connection.entries[0].givenName, self.connection.entries[0].sn)
-                if self.debug:
-                    print(self.connection.entries)
-                return employee
-
+        self.connection.search(search_base=self.user_dn,
+        search_filter=filter,
+        search_scope=SUBTREE,
+        attributes = [ALL_ATTRIBUTES], size_limit=0)
+        if self.connection.entries and len(self.connection.entries) > 0:
+	    employee = Employee(self.connection.entries[0].mail,self.connection.entries[0].givenName, self.connection.entries[0].sn)
+	    if self.debug:
+	        print(self.connection.entries)
+	    return employee
+ 
         return False
 
     def GetMembership(self,netid):
@@ -66,63 +65,85 @@ class Ldap:
                  for group in self.connection.entries:
                      groups.append(group.cn)
         return groups
+
     def GetEmployeesByGuid(self, objectguid):
         return self.GetGroupByGuid(objectguid).employees
  
     def GetGroupByGuid(self, objectguid):
         employees = []
         filter = "(objectGuid=" + str(objectguid) + ")"
-        if self.connection.bind():
-            self.connection.search(search_base=self.pathRoot, 
-            search_filter=filter, 
-            search_scope=SUBTREE,
-            attributes = ["objectGuid","cn","distinguishedName", "member"], size_limit=0)
-            if self.connection.entries and len(self.connection.entries) > 0:
-                group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
-                if self.connection.entries[0].member:
-                    for member in self.connection.entries[0].member:
-                        employee = Employee(member.split(',')[0].split('=')[1]+'@uic.edu')
-                        employee.dn = member
-                        group.AddEmployee(employee)
-                return group 
-            else:
-                sys.exit("Group not found")
-             
+        self.connection.search(search_base=self.pathRoot, 
+        search_filter = filter, 
+        search_scope = SUBTREE,
+        attributes = ["objectGuid","cn","distinguishedName", "member"], size_limit=0)
+
+        if self.connection.entries and len(self.connection.entries) > 0:
+            group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
+            if self.connection.entries[0].member:
+                for member in self.connection.entries[0].member:
+                    employee = Employee(member.split(',')[0].split('=')[1]+'@uic.edu')
+                    employee.dn = member
+                    group.AddEmployee(employee)
+
+            return group 
+
         else:
-            #print("request" + str(self.connection.request))
-            #print("response" + str(self.connection.response))
-            sys.exit("Failed to LDAP Bind")
+            raise Exception("Group GUID " + objectGuid + " not found")
+             
+        if self.debug:
+            print("request: " + str(self.connection.request))
+            print("response: " + str(self.connection.response))
+
+        return False
 
     def AddUsersToGroup(self, employees, objectguid):
-        self.GroupActions(employees, objectguid,'add')
+        try:
+            self.GroupActions(employees, objectguid,'add')
+        except LDAPException as e:
+            raise
 
     def DeleteUsersFromGroup(self, employees, objectguid):
-        self.GroupActions(employees,objectguid, 'delete')
+        try:
+            self.GroupActions(employees,objectguid, 'delete')
+        except LDAPException as e:
+            raise
     
     def GroupActions(self, employees, objectguid, action):
         if self.connection.bind():
+
             distinguishedNames = []
+
             for employee in employees:
                 if not employee.dn:
                     distinguishedNames.append("CN=" + employee.netid + "," + self.user_dn)
                 else:
                     distinguishedNames.append(employee.dn)
-            print("group action " + action)
+
             group = self.GetGroupByGuid(objectguid)
+
             if action == 'delete':
-                print("deleting" + str(distinguishedNames))
-                self.connection.modify(group.dn, {'member': [(MODIFY_DELETE,distinguishedNames)]})
+                try:
+                    self.connection.modify(group.dn, {'member': [(MODIFY_DELETE,distinguishedNames)]})
+                except LDAPException as e:
+                    raise
+
             if action == 'add':
-                print("adding" + str(distinguishedNames))
-                print("print group" + str(group))
-                self.connection.modify(group.dn, {'member': [(MODIFY_ADD,distinguishedNames)]}) 
-                #self.connection.extend.microsoft.add_members_to_groups(distinguishedNames, [group.dn])
-                print("result" + str(self.connection.result))
-            print("request" + str(self.connection.request))
-            print("response" + str(self.connection.response))
+                try:
+                    self.connection.modify(group.dn, {'member': [(MODIFY_ADD,distinguishedNames)]}) 
+                except LDAPException as e:
+                    raise
+
+            if self.debug:
+                print("request" + str(self.connection.request))
+                print("response" + str(self.connection.response))
+        else:
+            sys.exit("Failed LDAP Bind")
 
     def CloseConnection(self):
-        self.connection.unbind()
+        try:
+            self.connection.unbind()
+        except LDAPException:
+            pass
 
 def main():
     parser = argparse.ArgumentParser(description="Query Active directory")

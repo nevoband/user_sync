@@ -22,24 +22,36 @@ class Employees:
         self.ldapEmployees = None
         self.sender = None
         self.recipient = None
+        self.ldap = None
+        self.edw = None
         self.message = []
         self.debug = False
+        self.syncEmployees = False
 
     def MissingFromLdap(self):
+        onboardEmployees = []
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
         for employee in missing:
             if self.ldap.Exists(employee.netid):
                 self.message.append( "on-board: " + employee.email)
+                onboardEmployees.append(employee)
+        if len(onboardEmployees) > 0 and self.syncEmployees == True:
+            self.ldap.AddUsersToGroup(onboardEmployees, self.ldapGuid)
 
     def MissingFromEdw(self):
+        offboardEmployees = []
         missing = set(self.ldapEmployees) - set(self.edwEmployees)
         for employee in missing:
             self.message.append("off-board: " + employee.netid)
+            offboardEmployees.append(employee)
             ldapMembership = self.ldap.GetMembership(employee.netid)
             if len(ldapMembership) > 0:
                 self.message.append("\t* Remove From:")
                 for group in ldapMembership:
-                   self.message.append("\t\t- " + str(group)) 
+                   self.message.append("\t\t- " + str(group))
+
+        if len(offboardEmployees) > 0 and self.syncEmployees == True:
+            self.ldap.DeleteUsersFromGroup(offboardEmployees, self.ldapGuid)
 
     def LoadEmployees(self):
         self.LoadEdwEmployees()
@@ -66,6 +78,7 @@ class Employees:
     def ConnectLdap(self,server,domain,account,password,authentication,path_root, user_dn):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
         self.ldap.user_dn = user_dn
+        self.ldap.debug = self.debug
         self.ldap.Connect()
 
     def ConnectEDW(self, username, password, host, port, database):
@@ -83,14 +96,14 @@ class Employees:
         msg["Subject"] = "auto script"
         msg["FROM"] = self.sender
         msg["To"] = self.recipient
-
-        if self.debug:
-            print msg.as_string()
-        else:
-            print "sending email"
-            s = smtplib.SMTP("localhost")
-            s.sendmail(self.sender, self.recipient, msg.as_string())
-            s.quit()
+        if len(self.message) > 0:
+            if self.debug:
+                print msg.as_string()
+            else:
+                print "sending email"
+                s = smtplib.SMTP("localhost")
+                s.sendmail(self.sender, self.recipient, msg.as_string())
+                s.quit()
 
 def main():
     parser = argparse.ArgumentParser(description="Compare EDW to Active Directory Group")
@@ -104,7 +117,7 @@ def main():
 
     parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="Filter only academic positions")
     parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="Filter only Staff positions")
-    parser.add_argument("--sync", dest="syncUsers", action="store_true", help="Write EDW employees results differences to Active Directory group")
+    parser.add_argument("--sync", dest="syncEmployees", action="store_true", help="Write EDW employees results differences to Active Directory group")
     parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger an on-boarding off-boarding notification to recipients added to the notify config file")
     parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
     args = parser.parse_args()
@@ -114,6 +127,10 @@ def main():
     edwConfig = configparser.ConfigParser()
     adConfig = configparser.ConfigParser()
     notifyConfig = configparser.ConfigParser()
+
+    if args.debug:
+        print("enabled debug")
+        employees.debug = args.debug
 
     adConfig.read(args.adConfigFile)
     employees.ConnectLdap(adConfig.get('AD','server'),
@@ -148,11 +165,14 @@ def main():
         if args.edwStaffFilter:
             employees.employeeTypeFilter = "Staff"
 
-    if args.debug:
-        employees.debug = args.debug
+    if args.syncEmployees:
+        employees.syncEmployees = args.syncEmployees
 
+    print("load employees")
     employees.LoadEmployees()
+    print("check missing from ldap")
     employees.MissingFromLdap()
+    print("check missing from edw")
     employees.MissingFromEdw()
 
     if args.notify and args.notifyConfig:
@@ -161,6 +181,7 @@ def main():
         employees.recipient = notifyConfig.get('NOTIFY', 'recipients') 
         employees.Notify()
 
+    print("Close Connection")
     employees.CloseConnections()
 
 if __name__ == "__main__":
