@@ -20,3 +20,9 @@ class Employee:
 
     def __hash__(self):
         return hash(self.netid)
+
+    def __str___(self):
+        return str(self.netid)
+
+    def __repr__(self):
+        return str(self.netid)

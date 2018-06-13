@@ -3,6 +3,7 @@
 import argparse
 import configparser
 import smtplib
+import sys
 
 from email.mime.text import MIMEText
 
@@ -27,16 +28,28 @@ class Employees:
         self.message = []
         self.debug = False
         self.syncEmployees = False
+        self.gracePeriodDays = 0
 
     def MissingFromLdap(self):
         onboardEmployees = []
         missing = set(self.edwEmployees) - set(self.ldapEmployees)
         for employee in missing:
-            if self.ldap.Exists(employee.netid):
+
+            try:
+                employeeExists = self.ldap.Exists(employee.netid)
+            except Exception as e:
+                self.message.append("Failed to check employee LDAP existance: " + str(e))
+                self.Notify()
+                sys.exit(1)
+ 
+            if employeeExists:
                 self.message.append( "on-board: " + employee.email)
                 onboardEmployees.append(employee)
         if len(onboardEmployees) > 0 and self.syncEmployees == True:
-            self.ldap.AddUsersToGroup(onboardEmployees, self.ldapGuid)
+            try:
+                self.ldap.AddUsersToGroup(onboardEmployees, self.ldapGuid)
+            except Exception as e:
+                self.message.append("Failed to add users to LDAP group")
 
     def MissingFromEdw(self):
         offboardEmployees = []
@@ -44,14 +57,26 @@ class Employees:
         for employee in missing:
             self.message.append("off-board: " + employee.netid)
             offboardEmployees.append(employee)
-            ldapMembership = self.ldap.GetMembership(employee.netid)
+
+            try:
+                ldapMembership = self.ldap.GetMembership(employee.netid)
+            except Exception as e:
+                self.message.append("Failed to check LDAP membership for: " + str(employee.netid))
+                self.Notify()
+                sys.exit(1)
+
             if len(ldapMembership) > 0:
                 self.message.append("\t* Remove From:")
                 for group in ldapMembership:
                    self.message.append("\t\t- " + str(group))
 
         if len(offboardEmployees) > 0 and self.syncEmployees == True:
-            self.ldap.DeleteUsersFromGroup(offboardEmployees, self.ldapGuid)
+            try:
+                self.ldap.DeleteUsersFromGroup(offboardEmployees, self.ldapGuid)
+            except Exception as e:
+                self.message.append("Failed to delete users from LDAP group")
+                self.Notify()
+                sys.exit(1)
 
     def LoadEmployees(self):
         self.LoadEdwEmployees()
@@ -70,25 +95,48 @@ class Employees:
             self.edw.FilterFaculty()
 
         #print employees
-        self.edwEmployees = self.edw.GetEmployees()
+        try:
+            self.edwEmployees = self.edw.GetEmployees()
+        except Exception as e:
+            self.message.append("Faild to load EDW Employees")
+            self.Notify()
+            sys.exit(1)
 
     def LoadLdapEmployees(self):
-        self.ldapEmployees = self.ldap.GetEmployeesByGuid(self.ldapGuid)
+        try:
+            self.ldapEmployees = self.ldap.GetEmployeesByGuid(self.ldapGuid)
+        except Exception as e:
+            self.message.append("Failed to get LDAP Employees (GUID: "+ self.ldapGuid + "): " + str(e))
+            self.Notify()
+            sys.exit(1)
     
     def ConnectLdap(self,server,domain,account,password,authentication,path_root, user_dn):
         self.ldap = Ldap(server,domain,account,password,authentication,path_root)
         self.ldap.user_dn = user_dn
         self.ldap.debug = self.debug
-        self.ldap.Connect()
+
+        try:
+            self.ldap.Connect()
+        except Exception as e:
+            self.message.append("Failed to Connect to LDAP: " + str(e))
+            self.Notify()
+            sys.exit(1)
 
     def ConnectEDW(self, username, password, host, port, database):
         #setup EDW connection
         self.edw = Edw( username, password, host, port,database)
-        self.edw.Connect()
+        self.edw.gracePeriodDays = self.gracePeriodDays
+
+        try:
+            self.edw.Connect()
+        except Exception as e:
+            self.message.append("Failed to connecto to EDW: " + str(e))
+            self.Notify()
+            sys.exit(1)
     
     def CloseConnections(self):
-        self.edw.CloseConnection()
-        self.ldap.CloseConnection()
+            self.edw.CloseConnection()
+            self.ldap.CloseConnection()
 
     def Notify(self):
         commands = "\r\n".join(self.message)
@@ -108,7 +156,7 @@ class Employees:
 def main():
     parser = argparse.ArgumentParser(description="Compare EDW to Active Directory Group")
     parser.add_argument("-d", "--edw-config", dest="edwConfigFile", type=str, required=True, help="Config file for EDW connection")
-    parser.add_argument("-a", "--ad-config", dest="adConfigFile", type=str, required=True, help="Config file for AD connection")
+    parser.add_argument("-l", "--ldap-config", dest="ldapConfigFile", type=str, required=True, help="Config file for AD connection")
     parser.add_argument("-n", "--notify-config", dest="notifyConfig", type=str, required=True, help="Config file for notification recipients")
     parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=True, help="Acive Dirctory GUID number for AD group to compare")
     parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False, help="Filter by EDW Organization code (optional)")
@@ -125,21 +173,24 @@ def main():
     employees = Employees()
 
     edwConfig = configparser.ConfigParser()
-    adConfig = configparser.ConfigParser()
+    ldapConfig = configparser.ConfigParser()
     notifyConfig = configparser.ConfigParser()
 
     if args.debug:
         print("enabled debug")
         employees.debug = args.debug
 
-    adConfig.read(args.adConfigFile)
-    employees.ConnectLdap(adConfig.get('AD','server'),
-        adConfig.get('AD','domain'),
-        adConfig.get('AD','account'),
-        adConfig.get('AD','password'),
-        adConfig.get('AD','authentication'),
-        adConfig.get('AD','path_root'),
-        adConfig.get('AD','user_dn'))
+    if args.grace:
+        employees.gracePeriodDays = args.grace
+
+    ldapConfig.read(args.ldapConfigFile)
+    employees.ConnectLdap(ldapConfig.get('AD','server'),
+        ldapConfig.get('AD','domain'),
+        ldapConfig.get('AD','account'),
+        ldapConfig.get('AD','password'),
+        ldapConfig.get('AD','authentication'),
+        ldapConfig.get('AD','path_root'),
+        ldapConfig.get('AD','user_dn'))
 
     edwConfig.read(args.edwConfigFile)
     employees.ConnectEDW(edwConfig.get('EDW_DB', 'username'), 
@@ -156,7 +207,7 @@ def main():
     
     if args.edwColCode:
         employees.colCode = args.edwColCode
-
+    
     if args.edwAcademicFilter == True and args.edwStaffFilter == True:
         sys.exit("Please choose either academic or staff not both")
     else:

@@ -36,7 +36,6 @@ class Edw:
         try: 
             self.edwDB = cx_Oracle.connect(self.username, self.password, self.host + ':' + self.port + '/' + self.database)
         except cx_Oracle.DatabaseError as e:
-            print("Database connection error: "+ str(e))
             raise
 
         self.edwCursor = self.edwDB.cursor()
@@ -116,6 +115,7 @@ class Edw:
             employee = Employee(employeeAttrib[0], employeeAttrib[1], employeeAttrib[2], employeeAttrib[3])
             employee.firstDay = employeeAttrib[4]
             employees.append(employee)
+
         return employees        
 
     def CloseConnection(self):

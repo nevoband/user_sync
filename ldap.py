@@ -5,7 +5,7 @@ import configparser
 import sys
 import logging
 
-from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE, LDAPException
+from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE
 from ldap3.utils.conv import escape_filter_chars
 
 from lib import Employee
@@ -32,7 +32,7 @@ class Ldap:
             raise 
 
     def Exists(self, netid):
-        if self.GetEmployee(netid, True):
+        if self.GetEmployee(netid):
             return True
 
         return False
@@ -43,12 +43,14 @@ class Ldap:
         search_filter=filter,
         search_scope=SUBTREE,
         attributes = [ALL_ATTRIBUTES], size_limit=0)
+       
         if self.connection.entries and len(self.connection.entries) > 0:
-	    employee = Employee(self.connection.entries[0].mail,self.connection.entries[0].givenName, self.connection.entries[0].sn)
+	    employee = Employee(str(self.connection.entries[0].mail),str(self.connection.entries[0].givenName), str(self.connection.entries[0].sn)
+)
 	    if self.debug:
 	        print(self.connection.entries)
 	    return employee
- 
+
         return False
 
     def GetMembership(self,netid):
