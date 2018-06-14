@@ -56,7 +56,7 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* path_root = ou=pharm,ou=depts,dc=ad,dc=uic,dc=edu
         * Store settings in AD Group
                 * Add a json to the note field:
-<code>
+```javascript
                 {
     "listserv" :
  {
@@ -69,7 +69,8 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 
 
 }
-</code>
+```
+
 ### Contribution guidelines ###
 
 * Writing tests
