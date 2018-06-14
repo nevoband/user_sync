@@ -54,7 +54,7 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* password = (AD password for service account)
 		* authentication = NTLM
 		* path_root = ou=pharm,ou=depts,dc=ad,dc=uic,dc=edu
-        * Store settings in AD Group
+                * Store settings in AD Group
                 * Add a json to the note field:
 ```javascript
 {
