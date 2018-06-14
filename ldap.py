@@ -4,6 +4,7 @@ import argparse
 import configparser
 import sys
 import logging
+import json
 
 from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE
 from ldap3.utils.conv import escape_filter_chars
@@ -63,6 +64,7 @@ class Ldap:
             search_filter=filter, 
             search_scope=SUBTREE,
             attributes = ["cn", "distinguishedName","description"], size_limit=0)
+
             if self.connection.entries and len(self.connection.entries) > 0:
                  for group in self.connection.entries:
                      groups.append(group.cn)
@@ -77,10 +79,18 @@ class Ldap:
         self.connection.search(search_base=self.pathRoot, 
         search_filter = filter, 
         search_scope = SUBTREE,
-        attributes = ["objectGuid","cn","distinguishedName", "member"], size_limit=0)
-
+        attributes = ["objectGuid","cn","distinguishedName","info","member"], size_limit=0)
         if self.connection.entries and len(self.connection.entries) > 0:
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
+
+            if self.connection.entries[0].info:
+                try:
+                    settings = json.loads(str(self.connection.entries[0].info))
+                    group.settings = settings
+                except ValueError as e:
+                    e.message = "Group's Note field does not contain a valid json: " + e.message
+                    raise
+
             if self.connection.entries[0].member:
                 for member in self.connection.entries[0].member:
                     employee = Employee(member.split(',')[0].split('=')[1]+'@uic.edu')
@@ -195,26 +205,28 @@ def main():
             ldap.DeleteUsersFromGroup(employees, args.groupGuid)
         else:
             print("no group guid given")
-    #if args.netid:
-    #    if ldap.Exists(args.netid):
-    #        if args.groupGuid:
-    #            ldap.GetMembership(args.netid)
-    #        ldap.GetEmployee(args.netid)
-    #    else:
-    #        print("No AD account exists for: " + args.netid)
-    #else:
-    #    if args.groupGuid:
-    #        group = ldap.GetGroupByGuid(args.groupGuid)
-            #print(str(group.dn))
+    if args.netid:
+        if ldap.Exists(args.netid):
+            if args.groupGuid:
+                ldap.GetMembership(args.netid)
+            ldap.GetEmployee(args.netid)
+        else:
+            print("No AD account exists for: " + args.netid)
+    else:
+        print("check if guid was enetered")
+        if args.groupGuid:
+            print("guid was entered")
+            group = ldap.GetGroupByGuid(args.groupGuid)
+            print(str(group.dn))
 
-    #if args.netid:
-    #    ldap.Exists(args.netid)
+    if args.netid:
+        ldap.Exists(args.netid)
     
         
-    #ldap.CloseConnection()
+    ldap.CloseConnection()
         
     #for employee in employees:
-    #    print(employee.email)
+    #print(employee.email)
     
 if __name__=="__main__":
     main()
