@@ -57,17 +57,12 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
         * Store settings in AD Group
                 * Add a json to the note field:
 ```javascript
-                {
+{
     "listserv" :
- {
-    
+    {
         "include" : ["nevoband@gmail.com","nevoband@illinois.edu"],
-    
         "exclude" : ["nevoband@uic.edu"]
-  
     }
-
-
 }
 ```
 
