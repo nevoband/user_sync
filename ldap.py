@@ -39,19 +39,20 @@ class Ldap:
         return False
 
     def GetEmployee(self, netid):
-        filter = "(&(objectClass=user)(sAMAccountName=" + netid + "))"
-        self.connection.search(search_base=self.user_dn,
+        filter = "(&(objectClass=user)(userPrincipalName=" + netid + "@*uic.edu))"
+        self.connection.search(search_base='DC=ad,DC=uic,DC=edu',
         search_filter=filter,
         search_scope=SUBTREE,
         attributes = [ALL_ATTRIBUTES], size_limit=0)
        
         if self.connection.entries and len(self.connection.entries) > 0:
-	    employee = Employee(str(self.connection.entries[0].mail),str(self.connection.entries[0].givenName), str(self.connection.entries[0].sn)
-)
-	    if self.debug:
-	        print(self.connection.entries)
-	    return employee
+            if self.debug:
+                print(self.connection.entries)
+            
+	    employee = Employee(str(self.connection.entries[0].mail),str(self.connection.entries[0].givenName), str(self.connection.entries[0].sn))
+	    employee.dn = str(self.connection.entries[0].distinguishedName)
 
+            return employee
         return False
 
     def GetMembership(self,netid):
@@ -72,20 +73,37 @@ class Ldap:
 
     def GetEmployeesByGuid(self, objectguid):
         return self.GetGroupByGuid(objectguid).employees
- 
+
+    def GetOuGroups(self, managedByNetid):
+        groups = []
+        employee = self.GetEmployee(managedByNetid)
+        filter = "(&(objectClass=group)(managedBy=" + str(employee.dn) + "))"
+        self.connection.search(search_base=self.pathRoot,
+        search_filter = filter,
+        search_scope = BASE,
+        attributes = ["objectGuid","cn","distinguishedName","info","member","mail"],
+        size_limit=0)
+        if self.connection.entries and len(self.connection.entries) > 0:
+            if self.debug:
+                print(self.connection.entries)
+
     def GetGroupByGuid(self, objectguid):
         employees = []
         filter = "(objectGuid=" + str(objectguid) + ")"
         self.connection.search(search_base=self.pathRoot, 
         search_filter = filter, 
         search_scope = SUBTREE,
-        attributes = ["objectGuid","cn","distinguishedName","info","member"], size_limit=0)
+        attributes = ["objectGuid","cn","distinguishedName","info","member","mail"],
+        #attributes = [ALL_ATTRIBUTES],
+        size_limit=0)
         if self.connection.entries and len(self.connection.entries) > 0:
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
 
             if self.connection.entries[0].info:
                 try:
                     settings = json.loads(str(self.connection.entries[0].info))
+                    if self.debug:
+                        print(self.connection.entries[0])
                     group.settings = settings
                 except ValueError as e:
                     e.message = "Group's Note field does not contain a valid json: " + e.message
@@ -162,6 +180,7 @@ def main():
     parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path")
     parser.add_argument("-g", "--guid", dest="groupGuid", type=str, required=False, help="get GUID of group you would like to pull members for")
     parser.add_argument("-n", "--netid", dest="netid", type=str, required=False, help="if GUID is provided get all groups this netid is a member of otherwise get get ldap info of user")
+    parser.add_argument("-l", "--groups-managed-by", dest="managedBy", type=str, required=False, help="List groups managed by given netid")
     parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
     parser.add_argument("--add-users", dest="addUsers", type=str, required=False, help="provide a comma sperated list of netids to add to the group")
     parser.add_argument("--delete-users", dest="delUsers", type=str, required=False, help="provide a comma sperated list of netids to remove from the group")
@@ -205,6 +224,13 @@ def main():
             ldap.DeleteUsersFromGroup(employees, args.groupGuid)
         else:
             print("no group guid given")
+
+    if args.managedBy:
+        if ldap.Exists(args.managedBy):
+            ldap.GetOuGroups(args.managedBy)
+        else:
+            print("No AD account exists for: " + args.managedBy)
+
     if args.netid:
         if ldap.Exists(args.netid):
             if args.groupGuid:
