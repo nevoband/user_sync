@@ -166,6 +166,7 @@ def main():
     parser.add_argument("--academic", dest="edwAcademicFilter", action="store_true", help="Filter only academic positions")
     parser.add_argument("--staff", dest="edwStaffFilter", action="store_true", help="Filter only Staff positions")
     parser.add_argument("--sync", dest="syncEmployees", action="store_true", help="Write EDW employees results differences to Active Directory group")
+    parser.add_argument("--auto", dest="autoSync", action="store_true", help="Automatically scan active directory and update groups according to their json config")
     parser.add_argument("--notify", dest="notify", action="store_true", help="Trigger an on-boarding off-boarding notification to recipients added to the notify config file")
     parser.add_argument("--debug", dest="debug", action="store_true", help="Print email message to stdout")
     args = parser.parse_args()
@@ -219,6 +220,9 @@ def main():
     if args.syncEmployees:
         employees.syncEmployees = args.syncEmployees
 
+    if args.autoScan:
+        employees.autoSyncEmployees()
+        
     print("load employees")
     employees.LoadEmployees()
     print("check missing from ldap")

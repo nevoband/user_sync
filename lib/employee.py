@@ -11,9 +11,13 @@ class Employee:
         self.firstDay = None
         self.dn = None
         self.departments = []
+        self.managedGroups = []
 
     def AddDepartment(self, department):
         self.departments.append(department)
+
+    def AddManagedGroup(self, groupDN):
+        self.managedGroups.append(groupDN)
 
     def __eq__(self, other):
         return (self is other) or (self.netid ==other.netid)

@@ -40,6 +40,17 @@ class Edw:
 
         self.edwCursor = self.edwDB.cursor()
 
+    def FilterClassCodes(self, classCodes):
+        classCodeConditional = []
+        classCodeFilterDict = {}
+        for idx, classCode in classCodes:
+            if "%" not in classCodes:
+                classCodeConditionals.append("_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD = :class_code_" + idx)
+            else:
+                classCodeConditionals.append("V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE :class_code_" + idx)
+            classCodeFilterDict["class_code_"+ idx] = classCode
+        self.filters.AddFilter("( " + ' OR '.join(classCodeConditional) + " )", classCodeFilterDict)
+        
     def FilterCollege(self, collegeCode ):
         collegeConditional = "V_JOB_DETL_HIST_1.JOB_DETL_COLL_CD = :coll_code"
         collegeFilterDict = { "coll_code":collegeCode }

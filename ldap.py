@@ -5,6 +5,7 @@ import configparser
 import sys
 import logging
 import json
+import hashlib
 
 from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, MODIFY_ADD, MODIFY_DELETE
 from ldap3.utils.conv import escape_filter_chars
@@ -40,7 +41,7 @@ class Ldap:
 
     def GetEmployee(self, netid):
         filter = "(&(objectClass=user)(userPrincipalName=" + netid + "@*uic.edu))"
-        self.connection.search(search_base='DC=ad,DC=uic,DC=edu',
+        self.connection.search(search_base=self.pathRoot,
         search_filter=filter,
         search_scope=SUBTREE,
         attributes = [ALL_ATTRIBUTES], size_limit=0)
@@ -52,7 +53,12 @@ class Ldap:
 	    employee = Employee(str(self.connection.entries[0].mail),str(self.connection.entries[0].givenName), str(self.connection.entries[0].sn))
 	    employee.dn = str(self.connection.entries[0].distinguishedName)
 
+            if self.connection.entries[0].managedObjects:
+                for group in self.connection.entries[0].managedObjects:
+                    employee.AddManagedGroup(str(group))
+                
             return employee
+
         return False
 
     def GetMembership(self,netid):
@@ -74,24 +80,23 @@ class Ldap:
     def GetEmployeesByGuid(self, objectguid):
         return self.GetGroupByGuid(objectguid).employees
 
-    def GetOuGroups(self, managedByNetid):
+    def GetManagedGroups(self, managedByNetid):
         groups = []
-        employee = self.GetEmployee(managedByNetid)
-        filter = "(&(objectClass=group)(managedBy=" + str(employee.dn) + "))"
+        employee = self.GetEmployee(managedByNetid)        
+        return employee.managedGroups
+
+    def GetGroupByDN(self, groupDN):
+        filter = "(distinguishedName=" + str(groupDN) + ")"
+        return self.GetGroupByFilter(filter) 
+ 
+    def GetGroupByGuid(self, objectguid):
+        filter = "(objectGuid=" + str(objectguid) + ")"
+        return self.GetGroupByFilter(filter)
+
+    def GetGroupByFilter(self, filter):
+        employees = []
         self.connection.search(search_base=self.pathRoot,
         search_filter = filter,
-        search_scope = BASE,
-        attributes = ["objectGuid","cn","distinguishedName","info","member","mail"],
-        size_limit=0)
-        if self.connection.entries and len(self.connection.entries) > 0:
-            if self.debug:
-                print(self.connection.entries)
-
-    def GetGroupByGuid(self, objectguid):
-        employees = []
-        filter = "(objectGuid=" + str(objectguid) + ")"
-        self.connection.search(search_base=self.pathRoot, 
-        search_filter = filter, 
         search_scope = SUBTREE,
         attributes = ["objectGuid","cn","distinguishedName","info","member","mail"],
         #attributes = [ALL_ATTRIBUTES],
@@ -125,6 +130,10 @@ class Ldap:
             print("response: " + str(self.connection.response))
 
         return False
+
+    def UpdateGroupAttribute(self, groupDN, attribute, value):
+        if self.connection.bind():
+            self.connection.modify(groupDN, { 'attribute' : [(MODIFY_REPLACE, [value])]})
 
     def AddUsersToGroup(self, employees, objectguid):
         try:
@@ -227,7 +236,15 @@ def main():
 
     if args.managedBy:
         if ldap.Exists(args.managedBy):
-            ldap.GetOuGroups(args.managedBy)
+            managedGroupsDN = ldap.GetManagedGroups(args.managedBy)
+            if managedGroupsDN:
+                managedGroups = []
+                for groupDN in managedGroupsDN:
+                    managedGroups.append(ldap.GetGroupByDN(groupDN))
+
+                print(managedGroups)
+            else:
+                print("No groups managed by user")
         else:
             print("No AD account exists for: " + args.managedBy)
 
@@ -239,9 +256,7 @@ def main():
         else:
             print("No AD account exists for: " + args.netid)
     else:
-        print("check if guid was enetered")
         if args.groupGuid:
-            print("guid was entered")
             group = ldap.GetGroupByGuid(args.groupGuid)
             print(str(group.dn))
 
