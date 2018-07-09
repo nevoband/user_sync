@@ -2,25 +2,25 @@
 
 class Employee:
 
-    def __init__(self, email, firstName=None, lastName=None, middleName=None):
+    def __init__(self, email, first_name=None, last_name=None, middle_name=None):
         self.netid = email.split('@')[0]
         self.email = email
-        self.firstName = firstName
-        self.lastName = lastName
-        self.middleName = middleName
+        self.firstName = first_name
+        self.lastName = last_name
+        self.middleName = middle_name
         self.firstDay = None
         self.dn = None
         self.departments = []
         self.managedGroups = []
 
-    def AddDepartment(self, department):
+    def add_department(self, department):
         self.departments.append(department)
 
-    def AddManagedGroup(self, groupDN):
-        self.managedGroups.append(groupDN)
+    def add_managed_group(self, group_dn):
+        self.managedGroups.append(group_dn)
 
     def __eq__(self, other):
-        return (self is other) or (self.netid ==other.netid)
+        return (self is other) or (self.netid == other.netid)
 
     def __hash__(self):
         return hash(self.netid)
