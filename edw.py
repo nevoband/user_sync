@@ -27,9 +27,11 @@ class Edw:
 
         self.edw_cursor = self.edw_db.cursor()
 
-    def get_employees(self, filters):
+    def get_employees(self, edw_filter):
         employees = []
-        if self.filters.conditionals > 0:
+        if edw_filter.conditionals > 0:
+            print(edw_filter.conditionals)
+            print(edw_filter.filterDict)
             query_employees = "SELECT\
                     DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
                 FROM\
@@ -62,11 +64,12 @@ class Edw:
                       AND\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_STATUS_IND = 'A'\
                       AND\
-                    " + ' AND '.join(filters.conditionals) + "\
+                    " + ' AND '.join(edw_filter.conditionals) + "\
                 ORDER BY\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR"
+
             try:
-                self.edw_cursor.execute(query_employees, filters.filterDict)
+                self.edw_cursor.execute(query_employees, edw_filter.filterDict)
             except cx_Oracle.DatabaseError as e:
                 print("Database execution error: " + str(e))
                 raise

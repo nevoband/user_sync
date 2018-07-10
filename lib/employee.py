@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+
 class Employee:
 
     def __init__(self, email, first_name=None, last_name=None, middle_name=None):
@@ -12,12 +13,16 @@ class Employee:
         self.dn = None
         self.departments = []
         self.managedGroups = []
+        self.memberOf = []
 
     def add_department(self, department):
         self.departments.append(department)
 
     def add_managed_group(self, group_dn):
         self.managedGroups.append(group_dn)
+
+    def add_member_of(self, group_dn):
+        self.memberOf.append(group_dn)
 
     def __eq__(self, other):
         return (self is other) or (self.netid == other.netid)

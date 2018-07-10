@@ -3,9 +3,7 @@
 import argparse
 import configparser
 import sys
-import logging
 import json
-import hashlib
 
 from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, \
     MODIFY_ADD, MODIFY_DELETE
@@ -37,38 +35,42 @@ class Ldap:
         except Exception as e:
             raise
 
-    def exists(self, netid):
-        if self.get_employee(netid):
+    def exists(self, net_id):
+        if self.get_employee(net_id):
             return True
 
         return False
 
-    def get_employee(self, netid):
-        filters = "(&(objectClass=user)(userPrincipalName=" + netid + "@*uic.edu))"
+    def get_employee(self, net_id):
+        filters = "(&(objectClass=user)(sAMAccountName=" + net_id + "))"
         self.connection.search(search_base=self.pathRoot, search_filter=filters, search_scope=SUBTREE,
                                attributes=[ALL_ATTRIBUTES], size_limit=0)
 
         if self.connection.entries and len(self.connection.entries) > 0:
             if self.debug:
-                print(self.connection.entries)
+                print("")
 
             employee = Employee(str(self.connection.entries[0].mail), str(self.connection.entries[0].givenName),
                                 str(self.connection.entries[0].sn))
             employee.dn = str(self.connection.entries[0].distinguishedName)
 
-            if self.connection.entries[0].managedObjects:
+            if hasattr(self.connection.entries[0], 'managedObjects'):
                 for group in self.connection.entries[0].managedObjects:
                     employee.add_managed_group(str(group))
+
+            if hasattr(self.connection.entries[0], 'memberOf'):
+                for group in self.connection.entries[0].memberOf:
+                    employee.add_member_of(str(group))
 
             return employee
 
         return False
 
-    def get_membership(self, netid):
+    def get_group(self, net_id):
         groups = []
 
         filters = "(member:1.2.840.113556.1.4.1941:={0})".format(
-            escape_filter_chars("CN=" + netid + "," + self.user_dn))
+            escape_filter_chars("CN=" + net_id + "," + self.user_dn))
 
         if self.connection.bind():
             self.connection.search(search_base=self.pathRoot,
@@ -82,30 +84,29 @@ class Ldap:
 
         return groups
 
-    def get_employees_by_guid(self, objectguid):
-        return self.get_group_by_guid(objectguid).employees
+    def get_employees_by_guid(self, group_guid):
+        return self.get_group_by_guid(group_guid).employees
 
-    def get_managed_groups(self):
-        groups = []
+    def get_managed_groups_dn(self):
         employee = self.get_employee(self.account)
         return employee.managedGroups
 
-    def get_group_by_dn(self, groupDN):
-        filter = "(distinguishedName=" + str(groupDN) + ")"
-        return self.get_group_by_filter(filter)
+    def get_group_by_dn(self, group_dn):
+        ldap_filters = "(distinguishedName=" + str(group_dn) + ")"
+        return self.get_group_by_filter(ldap_filters)
 
-    def get_group_by_guid(self, objectguid):
-        filter = "(objectGuid=" + str(objectguid) + ")"
-        return self.get_group_by_filter(filter)
+    def get_group_by_guid(self, group_guid):
+        ldap_filters = "(objectGuid=" + str(group_guid) + ")"
+        return self.get_group_by_filter(ldap_filters)
 
-    def get_group_by_filter(self, filter):
-        employees = []
+    def get_group_by_filter(self, ldap_filter):
         self.connection.search(search_base=self.pathRoot,
-                               search_filter=filter,
+                               search_filter=ldap_filter,
                                search_scope=SUBTREE,
                                attributes=["objectGuid", "cn", "distinguishedName", "info", "member", "mail"],
                                # attributes = [ALL_ATTRIBUTES],
                                size_limit=0)
+
         if self.connection.entries and len(self.connection.entries) > 0:
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
 
@@ -118,6 +119,8 @@ class Ldap:
                 except ValueError as e:
                     e.message = "Group's Note field does not contain a valid json: " + e.message
                     raise
+            if self.connection.entries[0].mail:
+                group.contactEmail = self.connection.entries[0].mail
 
             if self.connection.entries[0].member:
                 for member in self.connection.entries[0].member:
@@ -247,7 +250,7 @@ def main():
 
     if args.managedBy:
         if ldap.exists(args.managedBy):
-            managedGroupsDN = ldap.get_managed_groups(args.managedBy)
+            managedGroupsDN = ldap.get_managed_groups_dn(args.managedBy)
             if managedGroupsDN:
                 managedGroups = []
                 for groupDN in managedGroupsDN:
@@ -262,7 +265,7 @@ def main():
     if args.netid:
         if ldap.exists(args.netid):
             if args.groupGuid:
-                ldap.get_membership(args.netid)
+                ldap.get_group(args.netid)
             ldap.get_employee(args.netid)
         else:
             print("No AD account exists for: " + args.netid)
