@@ -46,9 +46,6 @@ class Ldap:
                                attributes=[ALL_ATTRIBUTES], size_limit=0)
 
         if self.connection.entries and len(self.connection.entries) > 0:
-            if self.debug:
-                print("")
-
             employee = Employee(str(self.connection.entries[0].mail), str(self.connection.entries[0].givenName),
                                 str(self.connection.entries[0].sn))
             employee.dn = str(self.connection.entries[0].distinguishedName)
@@ -107,11 +104,8 @@ class Ldap:
                                size_limit=0)
 
         if self.connection.entries and len(self.connection.entries) > 0:
-            print("created group")
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
-            print(self.connection.entries[0])
             if self.connection.entries[0].info:
-                print("test123")
                 try:
                     print(5)
                     settings = json.loads(str(self.connection.entries[0].info))

@@ -39,9 +39,7 @@ class Employees:
             group_notifications = []
             ldap_group = None
             try:
-                print(ldapGroupDN)
                 ldap_group = self.ldap.get_group_by_dn(ldapGroupDN)
-                print("loaded ldap group")
                 if ldap_group is not None and ldap_group.settings['script_enabled'] is True:
                     self.sync_group(ldap_group, group_notifications)
             except Exception as e:
@@ -62,9 +60,6 @@ class Employees:
         self.send_email(self.recipient, self.sender, subject, content)
 
     def sync_group(self, ldap_group, group_notifications):
-
-        print("LDAP GROUP DN" + ldap_group.dn)
-        print("LDAP GROUP GUID: " + ldap_group.guid)
         edw_filters = EdwFilter()
         edw_filters.filter_class_codes(ldap_group.settings['members']['class_code'])
         edw_filters.filter_college(ldap_group.settings['members']['college_code'])
