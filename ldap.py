@@ -6,9 +6,8 @@ import sys
 import json
 
 from ldap3 import Server, Connection, SIMPLE, SYNC, ALL, SASL, SUBTREE, NTLM, BASE, ALL_ATTRIBUTES, Entry, Attribute, \
-    MODIFY_ADD, MODIFY_DELETE
+    MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE
 from ldap3.utils.conv import escape_filter_chars
-
 from lib import Employee
 from lib import Group
 
@@ -108,10 +107,13 @@ class Ldap:
                                size_limit=0)
 
         if self.connection.entries and len(self.connection.entries) > 0:
+            print("created group")
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
-
+            print(self.connection.entries[0])
             if self.connection.entries[0].info:
+                print("test123")
                 try:
+                    print(5)
                     settings = json.loads(str(self.connection.entries[0].info))
                     if self.debug:
                         print(self.connection.entries[0])
@@ -119,8 +121,9 @@ class Ldap:
                 except ValueError as e:
                     e.message = "Group's Note field does not contain a valid json: " + e.message
                     raise
+
             if self.connection.entries[0].mail:
-                group.contactEmail = self.connection.entries[0].mail
+                group.mail = self.connection.entries[0].mail
 
             if self.connection.entries[0].member:
                 for member in self.connection.entries[0].member:
@@ -141,21 +144,21 @@ class Ldap:
 
     def update_group_attribute(self, group_dn, attribute, value):
         if self.connection.bind():
-            self.connection.modify(group_dn, {'attribute': [(MODIFY_REPLACE, [value])]})
+            self.connection.modify(group_dn, {attribute: [(MODIFY_REPLACE, [value])]})
 
-    def add_users_to_group(self, employees, objectguid):
+    def add_users_to_group(self, employees, group_dn):
         try:
-            self.group_actions(employees, objectguid, 'add')
+            self.group_actions(employees, group_dn, 'add')
         except Exception as e:
             raise
 
-    def delete_users_from_group(self, employees, objectguid):
+    def delete_users_from_group(self, employees, group_dn):
         try:
-            self.group_actions(employees, objectguid, 'delete')
+            self.group_actions(employees, group_dn, 'delete')
         except Exception as e:
             raise
 
-    def group_actions(self, employees, objectguid, action):
+    def group_actions(self, employees, group_dn, action):
         if self.connection.bind():
 
             distinguished_names = []
@@ -166,17 +169,15 @@ class Ldap:
                 else:
                     distinguished_names.append(employee.dn)
 
-            group = self.get_group_by_guid(objectguid)
-
             if action == 'delete':
                 try:
-                    self.connection.modify(group.dn, {'member': [(MODIFY_DELETE, distinguished_names)]})
+                    self.connection.modify(group_dn, {'member': [(MODIFY_DELETE, distinguished_names)]})
                 except Exception as e:
                     raise
 
             if action == 'add':
                 try:
-                    self.connection.modify(group.dn, {'member': [(MODIFY_ADD, distinguished_names)]})
+                    self.connection.modify(group_dn, {'member': [(MODIFY_ADD, distinguished_names)]})
                 except Exception as e:
                     raise
 

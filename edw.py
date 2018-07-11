@@ -97,10 +97,7 @@ def main():
     parser.add_argument("-o", "--org-code", dest="orgCode" , type=str, required=False, help="Organization Code to filter employees by")
     parser.add_argument("-d", "--col-code", dest="colCode" , type=str, required=True, help="College Code")
     parser.add_argument("-p", "--grace-period", dest="grace", type=int, required=False, help="Grace period in days after a person is terminated to still pull them as active")
-    parser.add_argument("--academic", dest="academicFilter", action="store_true", help="filter only academic positions")
-    parser.add_argument("--staff", dest="staffFilter", action="store_true", help="filter only Staff filter")
 
-    
     args = parser.parse_args()
 
     # parse the config ini file
