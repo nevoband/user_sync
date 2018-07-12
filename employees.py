@@ -83,14 +83,16 @@ class Employees:
 
         for employee in missing:
             try:
-                print("checking if " + employee.netid + " exists")
+                if self.debug:
+                    print("checking if " + employee.netid + " exists")
                 employee_exists = self.ldap.exists(employee.netid)
             except Exception as e:
                 notifications.append("Failed to check employee LDAP existence: " + str(e))
                 self.notify()
                 sys.exit(1)
             if employee_exists:
-                print("on-board: " + employee.email)
+                if self.debug:
+                    print("on-board: " + employee.email)
                 notifications.append("on-board: " + employee.email)
                 on_board_employees.append(employee)
 
@@ -104,7 +106,8 @@ class Employees:
         off_board_employees = []
         missing = set(ldap_employees) - set(edw_employees)
         for employee in missing:
-            print("off-board " + employee.netid)
+            if self.debug:
+                print("off-board " + employee.netid)
             notifications.append("off-board: " + employee.netid)
             off_board_employees.append(employee)
 

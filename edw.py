@@ -30,8 +30,6 @@ class Edw:
     def get_employees(self, edw_filter):
         employees = []
         if edw_filter.conditionals > 0:
-            print(edw_filter.conditionals)
-            print(edw_filter.filterDict)
             query_employees = "SELECT\
                     DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
                 FROM\
