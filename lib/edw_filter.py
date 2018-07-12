@@ -45,7 +45,6 @@ class EdwFilter:
     def filter_organization_codes(self, org_codes):
         org_conditionals = []
         org_dict = {}
-        print(type(org_codes))
         if len(org_codes) > 0:
             for idx, org_code in enumerate(org_codes):
                 org_conditionals.append("V_JOB_DETL_HIST_1.ORG_CD = :org_code_" + str(idx))
