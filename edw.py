@@ -2,25 +2,12 @@
 import configparser
 import argparse
 import cx_Oracle
-import smtplib
 import sys
 
 from lib import Employee
+from lib import EdwFilter
 
-class Filters:
-    def __init__(self):
-        self.conditionals = []
-        self.filterDict = {}
-        self.filterInc = 0
 
-    def AddFilter(self, conditional, filterDict = None):
-        self.conditionals.append(conditional)
-
-        if filterDict:
-            self.filterDict.update(filterDict)
-
-        self.filterInc += 1
-    
 class Edw:
     def __init__(self, username, password, host, port, database):
         self.username = username
@@ -28,46 +15,22 @@ class Edw:
         self.host = host
         self.port = port
         self.database = database
-        self.filters = Filters()
+        self.gracePeriodDays = 0
+        self.edw_db = None
+        self.edw_cursor = None
 
-    def Connect(self):
-
+    def connect(self):
         try: 
-            self.edwDB = cx_Oracle.connect(self.username, self.password, self.host + ':' + self.port + '/' + self.database)
+            self.edw_db = cx_Oracle.connect(self.username, self.password, self.host + ':' + self.port + '/' + self.database)
         except cx_Oracle.DatabaseError as e:
-            print(e)        
             raise
 
-        self.edwCursor = self.edwDB.cursor()
+        self.edw_cursor = self.edw_db.cursor()
 
-    def FilterCollege(self, collegeCode ):
-        collegeConditional = "V_JOB_DETL_HIST_1.JOB_DETL_COLL_CD = :coll_code"
-        collegeFilterDict = { "coll_code":collegeCode }
-        self.filters.AddFilter(collegeConditional, collegeFilterDict)
-
-    def FilterFaculty(self):
-        facultyConditional = "(\
-                                 V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'A%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD = 'HA' OR\
-                                 V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'P%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'R%'\
-                                )"
-        self.filters.AddFilter(facultyConditional)
-
-    def FilterStaff(self):
-        staffConditional = "( \
-                   V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'B%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'C%' OR \
-                   V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'D%' OR V_JOB_DETL_HIST_1.JOB_DETL_EMPEE_CLS_CD LIKE 'E%'\
-                  )"
-        self.filters.AddFilter(staffConditional)
-
-    def FilterOrganization(self, orgCodeFilter):
-        orgConditional = "V_JOB_DETL_HIST_1.ORG_CD = :org_code_" + str(self.filters.filterInc)
-        orgFilterDict = { "org_code_" + str(self.filters.filterInc):orgCodeFilter }
-        self.filters.AddFilter(orgConditional, orgFilterDict)
-        
-    def GetEmployees(self):
+    def get_employees(self, edw_filter):
         employees = []
-        if self.filters.conditionals > 0:    
-            queryEmployees = "SELECT\
+        if edw_filter.conditionals > 0:
+            query_employees = "SELECT\
                     DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
                 FROM\
                     V_JOB_DETL_HIST_1,\
@@ -81,11 +44,9 @@ class Edw:
                       AND\
                     V_JOB_DETL_HIST_1.EDW_PERS_ID = V_EMPEE_PERS_HIST_1.EDW_PERS_ID\
                       AND\
-                    V_EMPEE_HIST_1.ACTIVE_EMPEE_IND = 'Y'\
-                      AND\
                     V_EMPEE_HIST_1.EMPEE_CUR_INFO_IND = 'Y'\
                       AND\
-                    V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'A'\
+                    (V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'A' OR (V_EMPEE_HIST_1.EMPEE_STATUS_CD = 'T' AND V_EMPEE_HIST_1.LAST_WORK_DT >= TRUNC(SYSDATE) - :grace_period ))\
                       AND\
                     V_EMPEE_HIST_1.EMPEE_DATA_STATUS_DESC = 'Current'\
                       AND\
@@ -93,68 +54,86 @@ class Edw:
                       AND\
                     V_JOB_DETL_HIST_1.JOB_DETL_DATA_STATUS_DESC = 'Current'\
                       AND\
-                    V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Active'\
+                    (V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Active' OR V_JOB_DETL_HIST_1.JOB_DETL_STATUS_DESC = 'Terminated')\
                       AND\
                         V_EMPEE_PERS_HIST_1.PERS_CUR_INFO_IND = 'Y'\
                       AND\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_UI_RPT_IND = 'Y'\
                       AND\
-                               V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_STATUS_IND = 'A'\
+                    V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_STATUS_IND = 'A'\
                       AND\
-                    " + ' AND '.join(self.filters.conditionals) + "\
+                    " + ' AND '.join(edw_filter.conditionals) + "\
                 ORDER BY\
                     V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR"
-            self.edwCursor.execute(queryEmployees, self.filters.filterDict)
+
+            try:
+                self.edw_cursor.execute(query_employees, edw_filter.filterDict)
+            except cx_Oracle.DatabaseError as e:
+                print("Database execution error: " + str(e))
+                raise
         else:
             sys.exit("no conditionals set")
 
-        for employeeAttrib in self.edwCursor:
+        for employeeAttrib in self.edw_cursor:
             employee = Employee(employeeAttrib[0], employeeAttrib[1], employeeAttrib[2], employeeAttrib[3])
             employee.firstDay = employeeAttrib[4]
             employees.append(employee)
+
         return employees        
 
-    def CloseConnection(self):
-        self.edwDB.close()
-        
+    def close_connection(self):
+        try:
+            self.edw_cursor.close()
+            self.edw_db.close()
+        except cx_Oracle.DatabaseError:
+            pass
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Update listserv subscribers from a text file")
+    parser = argparse.ArgumentParser(description="update listserv subscribers from a text file")
     parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path ")
     parser.add_argument("-o", "--org-code", dest="orgCode" , type=str, required=False, help="Organization Code to filter employees by")
     parser.add_argument("-d", "--col-code", dest="colCode" , type=str, required=True, help="College Code")
-    parser.add_argument("--academic", dest="academicFilter", action="store_true", help="filter only academic positions")
-    parser.add_argument("--staff", dest="staffFilter", action="store_true", help="filter only Staff filter")
+    parser.add_argument("-p", "--grace-period", dest="grace", type=int, required=False, help="Grace period in days after a person is terminated to still pull them as active")
 
-    
     args = parser.parse_args()
 
-    #parse the config ini file
+    # parse the config ini file
     config = configparser.ConfigParser()
     config.read(args.configFilePath)
     
-    #setup EDW connection
+    # setup EDW connection
     edw = Edw( config.get('EDW_DB', 'username'), config.get('EDW_DB', 'password'),config.get('EDW_DB', 'host'),config.get('EDW_DB', 'port'),config.get('EDW_DB', 'database'))
-    edw.Connect()
+    edw.connect()
+    
+    filters = EdwFilter()
 
-    #filters
+    # set grace period if user requested
+    if args.grace:
+        filters.filter_grace_period(args.grace)
+
+    # filters
     if args.orgCode:
-        edw.FilterOrganization(args.orgCode)
+        filters.FilterOrganization(args.orgCode.split(","))
 
-    edw.FilterCollege(args.colCode)
+    filters.filter_college(args.colCode)
 
     if args.staffFilter:
-        edw.FilterStaff()
+        filters.filter_staff()
     
     if args.academicFilter:
-        edw.FilterFaculty()
+        filters.filter_faculty()
 
-    #print employees
-    employees = edw.GetEmployees()
-    for employee in employees:
-        print(employee.netid +";")
+    # print employees
+    try:
+        # print employees
+        employees = edw.get_employees(filters)
+        for employee in employees:
+            print(employee.netid +";")
+    finally:
+        # close connection to EDW
+        edw.close_connection()
 
-    #close connection to EDW
-    edw.CloseConnection()
 
 if __name__ == "__main__":
     main()
