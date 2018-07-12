@@ -46,7 +46,7 @@ class Employees:
                 print("failed to load ldap group")
                 group_notifications.append("Failed to load group :" + str(e))
 
-            subject = "AD Group Update: " + common_name
+            subject = "AD Group update: " + common_name
             group_content = "\r\n".join(group_notifications)
             print("group Email")
             if ldap_group.mail:
@@ -187,7 +187,7 @@ class Employees:
 
     def notify(self):
         message_content = "\r\n".join(self.message)
-        subject = "AD Group Update Script"
+        subject = "AD Group update Script"
         self.send_email(self.sender, self.recipient, subject, message_content)
 
     def send_email(self, recipient, sender, subject, message_content):

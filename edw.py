@@ -92,7 +92,7 @@ class Edw:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update listserv subscribers from a text file")
+    parser = argparse.ArgumentParser(description="update listserv subscribers from a text file")
     parser.add_argument("-c", "--config", dest="configFilePath", type=str, required=True, help="config.ini file path ")
     parser.add_argument("-o", "--org-code", dest="orgCode" , type=str, required=False, help="Organization Code to filter employees by")
     parser.add_argument("-d", "--col-code", dest="colCode" , type=str, required=True, help="College Code")
