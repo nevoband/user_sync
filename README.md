@@ -53,7 +53,18 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* account = (Read only service account with access only to groups you want to read)
 		* password = (AD password for service account)
 		* authentication = NTLM
-		* path_root = ou=pharm,ou=depts,dc=ad,dc=uic,dc=edu
+		* path_root = ou=pharm,ou=depts,dc=ad,dc=uic,dc=edu  
+	* Store settings in AD Group
+		* Add a json to the note field:
+```javascript
+{
+    "listserv" :
+    {
+        "include" : ["nevoband@gmail.com","nevoband@illinois.edu"],
+        "exclude" : ["nevoband@uic.edu"]
+    }
+}
+```
 
 ### Contribution guidelines ###
 

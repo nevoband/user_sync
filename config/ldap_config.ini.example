@@ -7,4 +7,4 @@ authentication =
 dc_child =
 path_root =
 path_child =
-user_dn = OU=Accounts,DC=ad,DC=uic,DC=edu
+user_dn = 
