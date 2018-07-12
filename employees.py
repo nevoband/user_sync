@@ -32,8 +32,14 @@ class Employees:
         self.gracePeriodDays = 0
 
     def auto(self):
-        managed_ldap_groups = self.ldap.get_managed_groups_dn()
         admin_notifications = []
+
+        try:
+            managed_ldap_groups = self.ldap.get_managed_groups_dn()
+        except Exception as e:
+            print("failed to get managed groups")
+            admin_notifications.append("Failed to get managed groups: " + str(e))
+
         for ldapGroupDN in managed_ldap_groups:
             common_name = str(ldapGroupDN).split(",")[0].split("=")[1]
             group_notifications = []
@@ -181,7 +187,7 @@ class Employees:
         try:
             self.edw.connect()
         except Exception as e:
-            self.message.append("Failed to connecto to EDW: " + str(e))
+            self.message.append("Failed to connect to to EDW: " + str(e))
             self.notify()
             sys.exit(1)
 
