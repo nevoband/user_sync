@@ -48,7 +48,8 @@ class Employees:
 
             subject = "AD Group update: " + common_name
             group_content = "\r\n".join(group_notifications)
-            print("group Email")
+            if self.debug:
+                print("Group Email: " + common_name)
             if ldap_group.mail:
                 self.send_email(str(ldap_group.mail), self.sender, subject, group_content)
             if len(group_notifications) > 0:
@@ -200,9 +201,9 @@ class Employees:
         msg["To"] = recipient
         if len(message_content) > 0:
             if self.debug:
-                print msg.as_string()
+                print(msg.as_string())
             else:
-                print "sending email"
+                print("sending email: " + recipient)
                 s = smtplib.SMTP("localhost")
                 s.sendmail(sender, recipient, msg.as_string())
                 s.quit()
