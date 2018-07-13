@@ -54,7 +54,8 @@ class Employees:
                     else:
                         group_notifications += json_settings_errors
             except Exception as e:
-                print("failed to load ldap group")
+                if self.debug:
+                    print("failed to load ldap group " + str(e))
                 group_notifications.append("Failed to load group :" + str(e))
 
             subject = "AD Group update: " + common_name
