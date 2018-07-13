@@ -46,8 +46,13 @@ class Employees:
             ldap_group = None
             try:
                 ldap_group = self.ldap.get_group_by_dn(ldapGroupDN)
-                if ldap_group is not None and ldap_group.settings['script_enabled'] is True:
-                    self.sync_group(ldap_group, group_notifications)
+                if ldap_group is not None:
+                    json_settings_errors = ldap_group.verify_settings()
+                    if len(json_settings_errors) == 0:
+                        if ldap_group.settings['script_enabled'] is True:
+                            self.sync_group(ldap_group, group_notifications)
+                    else:
+                        group_notifications += json_settings_errors
             except Exception as e:
                 print("failed to load ldap group")
                 group_notifications.append("Failed to load group :" + str(e))
