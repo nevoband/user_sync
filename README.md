@@ -59,12 +59,23 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* Add a json to the note field:
 ```javascript
 {
+    "script_enabled" : true,
+    "updated" : "",
     "listserv" :
     {
         "include" : ["nevoband@gmail.com","nevoband@illinois.edu"],
         "exclude" : ["nevoband@uic.edu"]
+    },
+    "members" :
+    {
+        "class_code" : ["B%", "C%", "D%", "E%"],
+        "college_code" : "FX",
+        "organization_codes" : [],
+        "exclude" : [],
+        "grace_period_days" : 14
     }
 }
+
 ```
 
 ### Contribution guidelines ###
