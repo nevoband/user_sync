@@ -206,18 +206,20 @@ class Employees:
         subject = "AD Group update Script"
         self.send_email(self.sender, self.recipient, subject, message_content)
 
-    def send_email(self, recipient, sender, subject, message_content):
+    def send_email(self, recipients, sender, subject, message_content):
         msg = MIMEText(message_content, "plain")
         msg["Subject"] = subject
         msg["FROM"] = sender
-        msg["To"] = recipient
+        msg["To"] = recipients
+
         if len(message_content) > 0:
             if self.debug:
                 print(msg.as_string())
             else:
-                print("sending email: " + recipient)
+                recipients_array = recipients.replace(" ", "").split(",")
+                print("sending email: " + recipients)
                 s = smtplib.SMTP("localhost")
-                s.sendmail(sender, recipient, msg.as_string())
+                s.sendmail(sender, recipients_array, msg.as_string())
                 s.quit()
 
 
