@@ -32,23 +32,36 @@ class Employees:
         self.gracePeriodDays = 0
 
     def auto(self):
-        managed_ldap_groups = self.ldap.get_managed_groups_dn()
         admin_notifications = []
+
+        try:
+            managed_ldap_groups = self.ldap.get_managed_groups_dn()
+        except Exception as e:
+            print("failed to get managed groups")
+            admin_notifications.append("Failed to get managed groups: " + str(e))
+
         for ldapGroupDN in managed_ldap_groups:
             common_name = str(ldapGroupDN).split(",")[0].split("=")[1]
             group_notifications = []
             ldap_group = None
             try:
                 ldap_group = self.ldap.get_group_by_dn(ldapGroupDN)
-                if ldap_group is not None and ldap_group.settings['script_enabled'] is True:
-                    self.sync_group(ldap_group, group_notifications)
+                if ldap_group is not None:
+                    json_settings_errors = ldap_group.verify_settings()
+                    if len(json_settings_errors) == 0:
+                        if ldap_group.settings['script_enabled'] is True:
+                            self.sync_group(ldap_group, group_notifications)
+                    else:
+                        group_notifications += json_settings_errors
             except Exception as e:
-                print("failed to load ldap group")
+                if self.debug:
+                    print("failed to load ldap group " + str(e))
                 group_notifications.append("Failed to load group :" + str(e))
 
             subject = "AD Group update: " + common_name
             group_content = "\r\n".join(group_notifications)
-            print("group Email")
+            if self.debug:
+                print("Group Email: " + common_name)
             if ldap_group.mail:
                 self.send_email(str(ldap_group.mail), self.sender, subject, group_content)
             if len(group_notifications) > 0:
@@ -83,14 +96,16 @@ class Employees:
 
         for employee in missing:
             try:
-                print("checking if " + employee.netid + " exists")
+                if self.debug:
+                    print("checking if " + employee.netid + " exists")
                 employee_exists = self.ldap.exists(employee.netid)
             except Exception as e:
                 notifications.append("Failed to check employee LDAP existence: " + str(e))
                 self.notify()
                 sys.exit(1)
             if employee_exists:
-                print("on-board: " + employee.email)
+                if self.debug:
+                    print("on-board: " + employee.email)
                 notifications.append("on-board: " + employee.email)
                 on_board_employees.append(employee)
 
@@ -104,7 +119,8 @@ class Employees:
         off_board_employees = []
         missing = set(ldap_employees) - set(edw_employees)
         for employee in missing:
-            print("off-board " + employee.netid)
+            if self.debug:
+                print("off-board " + employee.netid)
             notifications.append("off-board: " + employee.netid)
             off_board_employees.append(employee)
 
@@ -177,7 +193,7 @@ class Employees:
         try:
             self.edw.connect()
         except Exception as e:
-            self.message.append("Failed to connecto to EDW: " + str(e))
+            self.message.append("Failed to connect to to EDW: " + str(e))
             self.notify()
             sys.exit(1)
 
@@ -190,18 +206,20 @@ class Employees:
         subject = "AD Group update Script"
         self.send_email(self.sender, self.recipient, subject, message_content)
 
-    def send_email(self, recipient, sender, subject, message_content):
+    def send_email(self, recipients, sender, subject, message_content):
         msg = MIMEText(message_content, "plain")
         msg["Subject"] = subject
         msg["FROM"] = sender
-        msg["To"] = recipient
+        msg["To"] = recipients
+
         if len(message_content) > 0:
             if self.debug:
-                print msg.as_string()
+                print(msg.as_string())
             else:
-                print "sending email"
+                recipients_array = recipients.replace(" ", "").split(",")
+                print("sending email: " + recipients)
                 s = smtplib.SMTP("localhost")
-                s.sendmail(sender, recipient, msg.as_string())
+                s.sendmail(sender, recipients_array, msg.as_string())
                 s.quit()
 
 

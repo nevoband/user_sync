@@ -42,6 +42,7 @@ class Ldap:
 
     def get_employee(self, net_id):
         filters = "(&(objectClass=user)(sAMAccountName=" + net_id + "))"
+
         self.connection.search(search_base=self.pathRoot, search_filter=filters, search_scope=SUBTREE,
                                attributes=[ALL_ATTRIBUTES], size_limit=0)
 
@@ -107,7 +108,6 @@ class Ldap:
             group = Group(str(self.connection.entries[0].distinguishedName), str(self.connection.entries[0].objectGuid))
             if self.connection.entries[0].info:
                 try:
-                    print(5)
                     settings = json.loads(str(self.connection.entries[0].info))
                     if self.debug:
                         print(self.connection.entries[0])
