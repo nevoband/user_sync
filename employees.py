@@ -45,6 +45,8 @@ class Employees:
             group_notifications = []
             ldap_group = None
             try:
+                if self.debug:
+                    print("Loading ldap group: " + ldapGroupDN)
                 ldap_group = self.ldap.get_group_by_dn(ldapGroupDN)
                 if ldap_group is not None:
                     json_settings_errors = ldap_group.verify_settings()
@@ -55,7 +57,7 @@ class Employees:
                         group_notifications += json_settings_errors
             except Exception as e:
                 if self.debug:
-                    print("failed to load ldap group " + str(e))
+                    print("failed to load ldap group: " + str(e))
                 group_notifications.append("Failed to load group :" + str(e))
 
             subject = "AD Group update: " + common_name
