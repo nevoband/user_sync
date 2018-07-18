@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from edw import Edw
 from lib import EdwFilter
 from ldap import Ldap
+from sharepoint import Sharepoint
 from lib import Employee
 
 
