@@ -8,19 +8,23 @@ class Sharepoint:
     auth = None
     form_digest = None
     subsite_url = None
+    site_collection_url = None
+    subsite = None
 
-    def __init__(self, domain, username, password, subsite_url):
+    def __init__(self, domain, username, password, site_collection_url):
         urllib3.disable_warnings()
         self.auth(domain, username, password)
-        self.subsite_url = subsite_url
-        self.form_digest()
+        self.site_collection_url = site_collection_url
 
     def auth(self, domain, username, password):
-        self.auth = HttpNtlmAuth(domain + '\\' + username, password)
+        self.domain = domain
+        self.username = username
+        self.password = password
+        self.auth = HttpNtlmAuth(self.domain + '\\' + self.username, self.password)
 
-    def form_digest(self):
+    def form_digest(self, subsite):
         r = requests.post(
-            self.subsite_url + '/_api/contextinfo',
+            self.site_collection_url + "/" + subsite + '/_api/contextinfo',
             verify=False,
             auth=self.auth,
             headers={
@@ -29,18 +33,25 @@ class Sharepoint:
         )
         self.form_digest = r.json().get('FormDigestValue')
 
-    def add_item(self, list_name, items):
-        r = requests.post(
-            self.subsite_url + "/_api/Web/lists/getbytitle('" + list_name + "')/Items",
-            verify=False,
-            auth=self.auth,
-            data=json.dumps(self.add_metadata_items(list_name, items)),
-            headers={
-                'X-RequestDigest': self.form_digest,
-                'Accept': "application/json;odata=verbose",
-                'content-Type': 'application/json;odata=verbose'
-            },
-        )
+    def add_item(self, items, list_name, subsite):
+        if self.subsite != subsite:
+            self.form_digest(self.site_collection_url + "/" + subsite)
+            self.subsite = subsite
+        try:
+            r = requests.post(
+                self.site_collection_url + "/" + self.subsite + "/_api/Web/lists/getbytitle('" + list_name + "')/Items",
+                verify=False,
+                auth=self.auth,
+                data=json.dumps(self.add_metadata_items(list_name, items)),
+                headers={
+                    'X-RequestDigest': self.form_digest,
+                    'Accept': "application/json;odata=verbose",
+                    'content-Type': 'application/json;odata=verbose'
+                },
+            )
+        except Exception as e:
+            raise
+
         return r
 
     def add_metadata_items(self, list_name, items):
