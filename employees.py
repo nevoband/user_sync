@@ -117,7 +117,7 @@ class Employees:
 
             if 'sharepoint' in ldap_group.settings:
                 if self.debug:
-                   print("adding users to sharepoint")
+                    print("adding users to sharepoint")
                 self.update_sharepoint(ldap_group, on_board_employees, 'user_added', notifications)
 
     def missing_from_edw(self, edw_employees, ldap_employees, ldap_group, notifications):
@@ -164,7 +164,7 @@ class Employees:
                     print("Sharepoint event: " + event)
                 try:
                     r = self.sharepoint.add_item(columns, ldap_group.settings['sharepoint']['list_name'],
-                                         ldap_group.settings['sharepoint']['subsite_name'])
+                                                 ldap_group.settings['sharepoint']['subsite_name'])
                 except Exception as e:
                     notifications.append("failed to add event " + event + " to sharepoint: " + str(e))
 
