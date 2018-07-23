@@ -114,11 +114,10 @@ class Ldap:
                     group.settings = settings
                 except ValueError as e:
                     e.message = "Group's Note field does not contain a valid json: " + e.message
+                    print("e.message")
                     raise
-
             if self.connection.entries[0].mail:
                 group.mail = self.connection.entries[0].mail
-
             if self.connection.entries[0].member:
                 for member in self.connection.entries[0].member:
                     employee = Employee(member.split(',')[0].split('=')[1] + '@uic.edu')

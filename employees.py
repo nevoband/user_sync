@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from edw import Edw
 from lib import EdwFilter
 from ldap import Ldap
+from sharepoint import Sharepoint
 from lib import Employee
 
 
@@ -26,6 +27,7 @@ class Employees:
         self.recipient = None
         self.ldap = None
         self.edw = None
+        self.sharepoint = None
         self.message = []
         self.debug = False
         self.sync_employees = False
@@ -81,18 +83,16 @@ class Employees:
         edw_filters.filter_organization_codes(ldap_group.settings['members']['organization_codes'])
         edw_filters.filter_exclude_netids(ldap_group.settings['members']['exclude'])
         edw_filters.filter_grace_period(ldap_group.settings['members']['grace_period_days'])
-
         try:
             edw_employees = self.edw.get_employees(edw_filters)
         except Exception as e:
             group_notifications.append("Failed to load EDW Employees: " + str(e))
             self.notify()
             sys.exit(1)
+        self.missing_from_ldap(edw_employees, ldap_group.employees, ldap_group, group_notifications)
+        self.missing_from_edw(edw_employees, ldap_group.employees, ldap_group, group_notifications)
 
-        self.missing_from_ldap(edw_employees, ldap_group.employees, ldap_group.dn, group_notifications)
-        self.missing_from_edw(edw_employees, ldap_group.employees, ldap_group.dn, group_notifications)
-
-    def missing_from_ldap(self, edw_employees, ldap_employees, ldap_group_dn, notifications):
+    def missing_from_ldap(self, edw_employees, ldap_employees, ldap_group, notifications):
         on_board_employees = []
         missing = set(edw_employees) - set(ldap_employees)
 
@@ -112,36 +112,69 @@ class Employees:
                 on_board_employees.append(employee)
 
         if len(on_board_employees) > 0 and self.sync_employees == True:
+
             try:
-                self.ldap.add_users_to_group(on_board_employees, ldap_group_dn)
+                self.ldap.add_users_to_group(on_board_employees, ldap_group.dn)
             except Exception as e:
                 notifications.append("Failed to add users to LDAP group: " + str(e))
 
-    def missing_from_edw(self, edw_employees, ldap_employees, ldap_group_dn, notifications):
+            if 'sharepoint' in ldap_group.settings:
+                if self.debug:
+                    print("adding users to sharepoint")
+                self.update_sharepoint(ldap_group, on_board_employees, 'user_added', notifications)
+
+    def missing_from_edw(self, edw_employees, ldap_employees, ldap_group, notifications):
         off_board_employees = []
         missing = set(ldap_employees) - set(edw_employees)
         for employee in missing:
             if self.debug:
                 print("off-board " + employee.netid)
             notifications.append("off-board: " + employee.netid)
-            off_board_employees.append(employee)
 
             try:
-                ldap_membership = self.ldap.get_employee(employee.netid).memberOf
+                employee.memberOf = self.ldap.get_employee(employee.netid).memberOf
             except Exception as e:
                 notifications.append("Failed to check LDAP membership for " + str(employee.netid) + ": " + str(e))
                 return notifications
 
-            if len(ldap_membership) > 0:
+            off_board_employees.append(employee)
+
+            if len(employee.memberOf) > 0:
                 self.message.append("\t* Remove From:")
-                for group in ldap_membership:
+                for group in employee.memberOf:
                     notifications.append("\t\t- " + str(group))
 
         if len(off_board_employees) > 0 and self.sync_employees is True:
             try:
-                self.ldap.delete_users_from_group(off_board_employees, ldap_group_dn)
+                self.ldap.delete_users_from_group(off_board_employees, ldap_group.dn)
             except Exception as e:
                 notifications.append("Failed to delete users from LDAP group: " + str(e))
+
+            if 'sharepoint' in ldap_group.settings:
+                self.update_sharepoint(ldap_group, off_board_employees, 'user_removed', notifications)
+
+    def update_sharepoint(self, ldap_group, employees, event, notifications):
+        for employee in employees:
+            columns = {}
+            if 'email' in ldap_group.settings['sharepoint']['columns'][event]:
+                columns[ldap_group.settings['sharepoint']['columns'][event]['email']] = employee.email
+
+            if 'event' in ldap_group.settings['sharepoint']['columns'][event]:
+                columns[ldap_group.settings['sharepoint']['columns'][event]['event']] = event
+
+            if len(columns) > 0:
+                if self.debug:
+                    print("Sharepoint event: " + event)
+                try:
+                    r = self.sharepoint.add_item(columns, ldap_group.settings['sharepoint']['list_name'],
+                                                 ldap_group.settings['sharepoint']['subsite_name'])
+                except Exception as e:
+                    notifications.append("failed to add event " + event + " to sharepoint: " + str(e))
+
+                if self.debug:
+                    print(r)
+                    print(columns)
+                    print(r.text)
 
     def load_employees(self):
         self.load_edw_employees()
@@ -199,6 +232,9 @@ class Employees:
             self.notify()
             sys.exit(1)
 
+    def connect_sharepoint(self, domain, username, password, collection_url):
+        self.sharepoint = Sharepoint(domain, username, password, collection_url)
+
     def close_connections(self):
         self.edw.close_connection()
         self.ldap.close_connection()
@@ -233,6 +269,8 @@ def main():
                         help="Config file for AD connection")
     parser.add_argument("-n", "--notify-config", dest="notifyConfig", type=str, required=False,
                         help="Config file for notification recipients")
+    parser.add_argument("-s", "--sharepoint-config", dest="sharepointConfig", type=str, required=False,
+                        help="Config file for sharepoint REST API")
     parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=False,
                         help="Acive Dirctory GUID number for AD group to compare")
     parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False,
@@ -256,6 +294,7 @@ def main():
     edw_config = configparser.ConfigParser()
     ldap_config = configparser.ConfigParser()
     notify_config = configparser.ConfigParser()
+    sharepoint_config = configparser.ConfigParser()
 
     if args.debug:
         print("enabled debug")
@@ -280,6 +319,12 @@ def main():
     notify_config.read(args.notifyConfig)
     employees.sender = notify_config.get('NOTIFY', 'sender')
     employees.recipient = notify_config.get('NOTIFY', 'recipients')
+
+    sharepoint_config.read(args.sharepointConfig)
+    employees.connect_sharepoint(sharepoint_config.get('SP', 'domain'),
+                                 sharepoint_config.get('SP', 'username'),
+                                 sharepoint_config.get('SP', 'password'),
+                                 sharepoint_config.get('SP', 'site_collection_url'))
 
     if args.grace:
         employees.gracePeriodDays = args.grace

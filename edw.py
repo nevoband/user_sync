@@ -31,7 +31,13 @@ class Edw:
         employees = []
         if edw_filter.conditionals > 0:
             query_employees = "SELECT\
-                    DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR, V_EMPEE_PERS_HIST_1.PERS_FNAME, V_EMPEE_PERS_HIST_1.PERS_LNAME, V_EMPEE_PERS_HIST_1.PERS_MNAME, V_EMPEE_HIST_1.FIRST_WORK_DT\
+                    DISTINCT V_EMPEE_CAMPUS_EMAIL_ADDR.EMAIL_ADDR,\
+                    V_EMPEE_PERS_HIST_1.PERS_FNAME,\
+                    V_EMPEE_PERS_HIST_1.PERS_LNAME,\
+                    V_EMPEE_PERS_HIST_1.PERS_MNAME,\
+                    V_EMPEE_HIST_1.FIRST_WORK_DT,\
+                    V_EMPEE_HIST_1.EMPEE_DEPT_NAME,\
+                    V_JOB_DETL_HIST_1.JOB_DETL_TITLE\
                 FROM\
                     V_JOB_DETL_HIST_1,\
                     V_EMPEE_HIST_1,\
@@ -77,6 +83,8 @@ class Edw:
         for employeeAttrib in self.edw_cursor:
             employee = Employee(employeeAttrib[0], employeeAttrib[1], employeeAttrib[2], employeeAttrib[3])
             employee.firstDay = employeeAttrib[4]
+            employee.department = employeeAttrib[5]
+            employee.position = employeeAttrib[6]
             employees.append(employee)
 
         return employees        
