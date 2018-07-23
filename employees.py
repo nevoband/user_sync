@@ -127,8 +127,11 @@ class Employees:
                 self.update_sharepoint(ldap_group, on_board_employees, 'user_added', notifications)
 
             if 'listserv' in ldap_group.settings:
-                self.listserv.add_subscribers(on_board_employees, ldap_group.settings['listserv']['list_name'])
-                self.listserv.update()
+                try:
+                    self.listserv.add_subscribers(on_board_employees, ldap_group.settings['listserv']['list_name'])
+                    self.listserv.update()
+                except Exception as e:
+                    notifications.append("Failed to update listserv: " + str(e))
 
     def missing_from_edw(self, edw_employees, ldap_employees, ldap_group, notifications):
         off_board_employees = []
@@ -161,8 +164,11 @@ class Employees:
                 self.update_sharepoint(ldap_group, off_board_employees, 'user_removed', notifications)
 
             if 'listserv' in ldap_group.settings:
-                self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
-                self.listserv.update()
+                try:
+                    self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
+                    self.listserv.update()
+                except Exception as e:
+                    notifications.append("Failed to update listserv: " + str(e))
 
     def update_sharepoint(self, ldap_group, employees, event, notifications):
         for employee in employees:

@@ -79,11 +79,15 @@ class ListServ:
         if self.debug:
             print msg.as_string()
         else:
-            print "sending email"
-            s = smtplib.SMTP("localhost")
-            print msg.as_string()
-            s.sendmail(self.owner, self.server, msg.as_string())
-            s.quit()
+            try:
+                print "sending email"
+                s = smtplib.SMTP("localhost")
+                print msg.as_string()
+                s.sendmail(self.owner, self.server, msg.as_string())
+            except Exception as e:
+                raise
+            finally:
+                s.quit()
 
 
 def main():
