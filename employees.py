@@ -110,6 +110,7 @@ class Employees:
                 on_board_employees.append(employee)
 
         if len(on_board_employees) > 0 and self.sync_employees == True:
+
             try:
                 self.ldap.add_users_to_group(on_board_employees, ldap_group.dn)
             except Exception as e:
