@@ -26,6 +26,17 @@ class Group:
         if 'college_code' in self.settings['members']:
             if self.settings['members'].get('college_code') is None:
                 json_errors.append("college_Code attribute does not have a value")
+        if 'sharepoint' in self.settings:
+            if 'list_name' not in self.settings['sharepoint']:
+                json_errors.append("sharepoint missing list_name in sharepoint")
+            if 'subsite_name' not in self.settings['sharepoint']:
+                json_errors.append("sharepoint missing subsite_name from sharepoint settings")
+            if 'columns' not in self.settings['sharepoint']:
+                json_errors.append("sharepoint missing columns in sharepoint settings")
+            if 'user_added' not in self.settings['sharepoint']['columns']:
+                json_errors.append("sharepoint missing user_added section in columns")
+            if 'user_removed' not in self.settings['sharepoint']['columns']:
+                json_errors.append("sharepoint missing user_removed section in columns")
         return json_errors
 
     def to_string(self):
