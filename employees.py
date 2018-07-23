@@ -11,6 +11,8 @@ from edw import Edw
 from lib import EdwFilter
 from ldap import Ldap
 from sharepoint import Sharepoint
+from listserv import ListServ
+
 from lib import Employee
 
 
@@ -28,6 +30,7 @@ class Employees:
         self.ldap = None
         self.edw = None
         self.sharepoint = None
+        self.listserv = None
         self.message = []
         self.debug = False
         self.sync_employees = False
@@ -123,6 +126,10 @@ class Employees:
                     print("adding users to sharepoint")
                 self.update_sharepoint(ldap_group, on_board_employees, 'user_added', notifications)
 
+            if 'listserv' in ldap_group.settings:
+                self.listserv.add_subscribers(on_board_employees, ldap_group.settings['listserv']['list_name'])
+                self.listserv.update()
+
     def missing_from_edw(self, edw_employees, ldap_employees, ldap_group, notifications):
         off_board_employees = []
         missing = set(ldap_employees) - set(edw_employees)
@@ -152,6 +159,10 @@ class Employees:
 
             if 'sharepoint' in ldap_group.settings:
                 self.update_sharepoint(ldap_group, off_board_employees, 'user_removed', notifications)
+
+            if 'listserv' in ldap_group.settings:
+                self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
+                self.listserv.update()
 
     def update_sharepoint(self, ldap_group, employees, event, notifications):
         for employee in employees:
@@ -235,6 +246,9 @@ class Employees:
     def connect_sharepoint(self, domain, username, password, collection_url):
         self.sharepoint = Sharepoint(domain, username, password, collection_url)
 
+    def connect_listserv(self, server, owner, password):
+        self.listserv = ListServ(server, owner, password, self.debug)
+
     def close_connections(self):
         self.edw.close_connection()
         self.ldap.close_connection()
@@ -273,6 +287,7 @@ def main():
                         help="Config file for sharepoint REST API")
     parser.add_argument("-g", "--ad-guid", dest="ldapGroupGuid", type=str, required=False,
                         help="Acive Dirctory GUID number for AD group to compare")
+    parser.add_argument("-m", "--listserv-config", dest="listservConfig", type=str, required=False, help="Config file for listserv")
     parser.add_argument("-o", "--org-code", dest="edwOrgCode", type=str, required=False,
                         help="Filter by EDW Organization code (optional)")
     parser.add_argument("-c", "--col-code", dest="edwColCode", type=str, required=False,
@@ -295,6 +310,7 @@ def main():
     ldap_config = configparser.ConfigParser()
     notify_config = configparser.ConfigParser()
     sharepoint_config = configparser.ConfigParser()
+    listserv_config = configparser.ConfigParser()
 
     if args.debug:
         print("enabled debug")
@@ -325,6 +341,11 @@ def main():
                                  sharepoint_config.get('SP', 'username'),
                                  sharepoint_config.get('SP', 'password'),
                                  sharepoint_config.get('SP', 'site_collection_url'))
+
+    listserv_config.read(args.listservConfig)
+    employees.connect_listserv(listserv_config.get('LISTSERV', 'listserv'),
+                               listserv_config.get('LISTSERV', 'owner_name'),
+                               listserv_config.get('LISTSERV', 'owner_password'))
 
     if args.grace:
         employees.gracePeriodDays = args.grace
