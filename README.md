@@ -26,7 +26,8 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 	* run ./ldap.py -h
 	* run ./listerv.py -h
 	* run ./employees.py -h
-		* Example: ./employees.py --edw-config /home/nevoband/configs/db_config.ini --ad-config /home/nevoband/configs/ad_config.ini --notify-config /home/nevoband/configs/notify_config.ini --col-code FX --ad-guid 80120a64-6725-4896-9829-e57d65ba1a28 --notify
+		* Example: ./employees.py --edw-config /home/nevoband/configs/edw_config.ini --ad-config /home/nevoband/configs/ldap_config.ini --notify-config /home/nevoband/configs/notify_config.ini --auto --sync --notify
+		* The above example will connect to LDAP and EDW based on the configurations, find every group the ldap account manages, try to find a json in the notes section, if json is found it will use it to build an EDW query and sync the EDW query user results to the LDAP group. (ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING!) use an ldap account to connect which has limited access to just the groups you want to update.
 * See copy and modify configs from configs folder for each service
 * EDW:
 	* https://www.aits.uillinois.edu/access/get_access/get_data_warehouse_access
@@ -58,12 +59,23 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 		* Add a json to the note field:
 ```javascript
 {
+    "script_enabled" : true,
+    "updated" : "",
     "listserv" :
     {
         "include" : ["nevoband@gmail.com","nevoband@illinois.edu"],
         "exclude" : ["nevoband@uic.edu"]
+    },
+    "members" :
+    {
+        "class_code" : ["B%", "C%", "D%", "E%"],
+        "college_code" : "FX",
+        "organization_codes" : [],
+        "exclude" : [],
+        "grace_period_days" : 14
     }
 }
+
 ```
 
 ### Contribution guidelines ###

@@ -9,6 +9,8 @@ class Employee:
         self.firstName = first_name
         self.lastName = last_name
         self.middleName = middle_name
+        self.department = None
+        self.position = None
         self.firstDay = None
         self.dn = None
         self.departments = []

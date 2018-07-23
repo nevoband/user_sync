@@ -8,11 +8,10 @@ from email.mime.text import MIMEText
 
 class ListServ:
 
-    def __init__(self, server, list_name, owner, password, debug):
+    def __init__(self, server, owner, password, debug=False):
         self.server = server
         self.owner = owner
         self.password = password
-        self.listName = list_name
         self.debug = debug
         self.commands = []
 
@@ -29,7 +28,7 @@ class ListServ:
 
         if self.verify_subscribers(subscribers) and self.verify_list_name(list_name):
             self.commands.append(add_email_list)
-    
+
     def add_subscribers(self, employees, list_name):
         subscribers = []
         add_email_list = "QUIET ADD " + list_name + " DD=USERS IMPORT PW=" + self.password + "\r\n//USERS DD *\r\n"
@@ -43,7 +42,7 @@ class ListServ:
 
     def delete_subscribers(self, employees, list_name):
         subscribers = []
-        delete_email_list = "QUIET DELETE " + list_name + " DD=USERS IMPORT PW=" + self.password + "\r\n//USERS DD *\r\n"
+        delete_email_list = "QUIET DELETE " + list_name + " DD=USERS PW=" + self.password + "\r\n//USERS DD *\r\n"
         for employee in employees:
             if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", employee.email):
                 subscribers.append(employee.email)
@@ -70,10 +69,10 @@ class ListServ:
             print "list name length is less than 2 charecters"
             return False
         return True
-        
+
     def update(self):
         commands = "\r\n".join(self.commands)
-        msg = MIMEText(commands ,"plain")
+        msg = MIMEText(commands, "plain")
         msg["Subject"] = "auto script"
         msg["FROM"] = self.owner
         msg["To"] = self.server
@@ -82,6 +81,7 @@ class ListServ:
         else:
             print "sending email"
             s = smtplib.SMTP("localhost")
+            print msg.as_string()
             s.sendmail(self.owner, self.server, msg.as_string())
             s.quit()
 
@@ -91,16 +91,20 @@ def main():
     parser.add_argument("--add", dest="addList", action="store_true")
     parser.add_argument("--clear", dest="deleteList", action="store_true")
     parser.add_argument("--debug", dest="debug", action="store_true")
-    parser.add_argument("-s", "--list-serv", dest="listserv", type=str, required=True, help="The listserv address EX: listserv@listserv.uic.edu")
-    parser.add_argument("-l", "--list-name", dest="list", type=str, required=True, help="Which list should we manage EX: copstaff ")
-    parser.add_argument("-o", "--owner-email", dest="owner", type=str, required=True,help="The owner of the list EX: nevoband@uic.edu")
-    parser.add_argument("-p", "--password" , dest="ownerPass", type=str, required=True, help="The owners listserv password")
+    parser.add_argument("-s", "--list-serv", dest="listserv", type=str, required=True,
+                        help="The listserv address EX: listserv@listserv.uic.edu")
+    parser.add_argument("-l", "--list-name", dest="list", type=str, required=True,
+                        help="Which list should we manage EX: copstaff ")
+    parser.add_argument("-o", "--owner-email", dest="owner", type=str, required=True,
+                        help="The owner of the list EX: nevoband@uic.edu")
+    parser.add_argument("-p", "--password", dest="ownerPass", type=str, required=True,
+                        help="The owners listserv password")
     parser.add_argument("listFile", type=argparse.FileType("r"))
     args = parser.parse_args()
 
     list_serv = ListServ(args.listserv, args.owner, args.ownerPass, args.debug)
 
-    if args.deleteList:    
+    if args.deleteList:
         list_serv.delete_all_subscribers(args.list)
 
     if args.addList:
