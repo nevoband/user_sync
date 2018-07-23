@@ -37,6 +37,9 @@ class Group:
                 json_errors.append("sharepoint missing user_added section in columns")
             if 'user_removed' not in self.settings['sharepoint']['columns']:
                 json_errors.append("sharepoint missing user_removed section in columns")
+        if 'listserv' in self.settings:
+            if 'list_name' not in self.settings['listserv']:
+                json_errors.append("missing list_name attribute for listserv")
         return json_errors
 
     def to_string(self):
