@@ -149,7 +149,7 @@ class Employees:
                 notifications.append("Failed to delete users from LDAP group: " + str(e))
 
             if 'sharepoint' in ldap_group.settings:
-                self.update_sharepoint(ldap_group, off_board_employees, 'user_added', notifications)
+                self.update_sharepoint(ldap_group, off_board_employees, 'user_removed', notifications)
 
     def update_sharepoint(self, ldap_group, employees, event, notifications):
         for employee in employees:

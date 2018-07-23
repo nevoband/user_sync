@@ -1,5 +1,5 @@
 import json
-import urllib3
+#import urllib3
 import requests
 from requests_ntlm import HttpNtlmAuth
 
@@ -12,7 +12,6 @@ class Sharepoint:
     subsite = None
 
     def __init__(self, domain, username, password, site_collection_url):
-        urllib3.disable_warnings()
         self.auth(domain, username, password)
         self.site_collection_url = site_collection_url
 
@@ -25,7 +24,7 @@ class Sharepoint:
     def form_digest(self, subsite):
         r = requests.post(
             self.site_collection_url + "/" + subsite + '/_api/contextinfo',
-            verify=False,
+            verify='certs/certs.pem',
             auth=self.auth,
             headers={
                 'Accept': "application/json",
@@ -40,7 +39,7 @@ class Sharepoint:
         try:
             r = requests.post(
                 self.site_collection_url + "/" + self.subsite + "/_api/Web/lists/getbytitle('" + list_name + "')/Items",
-                verify=False,
+                verify='certs/certs.pem',
                 auth=self.auth,
                 data=json.dumps(self.add_metadata_items(list_name, items)),
                 headers={
