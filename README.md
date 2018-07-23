@@ -60,22 +60,37 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
 ```javascript
 {
     "script_enabled" : true,
-    "updated" : "",
-    "listserv" :
+    "listserv":
     {
-        "include" : ["nevoband@gmail.com","nevoband@illinois.edu"],
-        "exclude" : ["nevoband@uic.edu"]
+        "list_name" : "copitutest"     
+    },
+    "sharepoint":
+    {
+        "list_name" : "Onboarding",
+        "subsite_name" : "onboarding",
+        "columns" :
+        {
+            "user_added":
+            {
+                "email" : "email",
+                "event" : "event"
+            },
+            "user_removed":
+            {
+              "email" : "email",
+              "event" : "event"
+            }
+        }
     },
     "members" :
     {
-        "class_code" : ["B%", "C%", "D%", "E%"],
+        "class_code" : [],
         "college_code" : "FX",
-        "organization_codes" : [],
+        "organization_codes" : ["270000"],
         "exclude" : [],
-        "grace_period_days" : 14
+        "grace_period_days" : 0
     }
 }
-
 ```
 
 ### Contribution guidelines ###
