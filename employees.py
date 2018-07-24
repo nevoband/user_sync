@@ -160,10 +160,10 @@ class Employees:
             except Exception as e:
                 notifications.append("Failed to delete users from LDAP group: " + str(e))
 
-            if 'sharepoint' in ldap_group.settings:
+            if 'sharepoint' in ldap_group.settings and self.sharepoint is not None:
                 self.update_sharepoint(ldap_group, off_board_employees, 'user_removed', notifications)
 
-            if 'listserv' in ldap_group.settings:
+            if 'listserv' in ldap_group.settings and self.listserv is not None:
                 try:
                     self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
                     self.listserv.update()
@@ -342,16 +342,18 @@ def main():
     employees.sender = notify_config.get('NOTIFY', 'sender')
     employees.recipient = notify_config.get('NOTIFY', 'recipients')
 
-    sharepoint_config.read(args.sharepointConfig)
-    employees.connect_sharepoint(sharepoint_config.get('SP', 'domain'),
-                                 sharepoint_config.get('SP', 'username'),
-                                 sharepoint_config.get('SP', 'password'),
-                                 sharepoint_config.get('SP', 'site_collection_url'))
+    if args.sharepointConfig:
+        sharepoint_config.read(args.sharepointConfig)
+        employees.connect_sharepoint(sharepoint_config.get('SP', 'domain'),
+                                     sharepoint_config.get('SP', 'username'),
+                                     sharepoint_config.get('SP', 'password'),
+                                     sharepoint_config.get('SP', 'site_collection_url'))
 
-    listserv_config.read(args.listservConfig)
-    employees.connect_listserv(listserv_config.get('LISTSERV', 'listserv'),
-                               listserv_config.get('LISTSERV', 'owner_name'),
-                               listserv_config.get('LISTSERV', 'owner_password'))
+    if args.listservConfig:
+        listserv_config.read(args.listservConfig)
+        employees.connect_listserv(listserv_config.get('LISTSERV', 'listserv'),
+                                   listserv_config.get('LISTSERV', 'owner_name'),
+                                   listserv_config.get('LISTSERV', 'owner_password'))
 
     if args.grace:
         employees.gracePeriodDays = args.grace
