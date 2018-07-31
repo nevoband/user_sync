@@ -88,6 +88,7 @@ class ListServ:
                 raise
             finally:
                 s.quit()
+                self.commands = []
 
 
 def main():
