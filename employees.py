@@ -322,6 +322,10 @@ def main():
         print("enabled debug")
         employees.debug = args.debug
 
+    notify_config.read(args.notifyConfig)
+    employees.sender = notify_config.get('NOTIFY', 'sender')
+    employees.recipient = notify_config.get('NOTIFY', 'recipients')
+
     ldap_config.read(args.ldapConfigFile)
     employees.connect_ldap(ldap_config.get('AD', 'server'),
                            ldap_config.get('AD', 'domain'),
@@ -337,10 +341,6 @@ def main():
                           edw_config.get('EDW_DB', 'host'),
                           edw_config.get('EDW_DB', 'port'),
                           edw_config.get('EDW_DB', 'database'))
-
-    notify_config.read(args.notifyConfig)
-    employees.sender = notify_config.get('NOTIFY', 'sender')
-    employees.recipient = notify_config.get('NOTIFY', 'recipients')
 
     if args.sharepointConfig:
         sharepoint_config.read(args.sharepointConfig)
