@@ -121,14 +121,17 @@ class Employees:
             except Exception as e:
                 notifications.append("Failed to add users to LDAP group: " + str(e))
 
-            if 'sharepoint' in ldap_group.settings:
+            if 'sharepoint' in ldap_group.settings and self.sharepoint is not None:
                 if self.debug:
                     print("adding users to sharepoint")
                 self.update_sharepoint(ldap_group, on_board_employees, 'user_added', notifications)
 
-            if 'listserv' in ldap_group.settings:
+            if 'listserv' in ldap_group.settings and self.listserv is not None:
                 try:
+                    self.listserv.unlock_list(ldap_group.settings['listserv']['list_name'])
                     self.listserv.add_subscribers(on_board_employees, ldap_group.settings['listserv']['list_name'])
+                    if 'lock_list' in ldap_group.settings['listserv'] and ldap_group.settings['listserv']['lock_list'] is True:
+                        self.listserv.lock_list(ldap_group.settings['listserv']['list_name'])
                     self.listserv.update()
                 except Exception as e:
                     notifications.append("Failed to update listserv: " + str(e))
@@ -165,7 +168,10 @@ class Employees:
 
             if 'listserv' in ldap_group.settings and self.listserv is not None:
                 try:
+                    self.listserv.unlock_list(ldap_group.settings['listserv']['list_name'])
                     self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
+                    if 'lock_list' in ldap_group.settings['listserv'] and ldap_group.settings['listserv']['lock_list'] is True:
+                        self.listserv.lock_list(ldap_group['listserv']['list_name'])
                     self.listserv.update()
                 except Exception as e:
                     notifications.append("Failed to update listserv: " + str(e))

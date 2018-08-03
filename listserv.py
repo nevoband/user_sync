@@ -56,6 +56,16 @@ class ListServ:
         if self.verify_list_name(list_name):
             self.commands.append(clear_email_list)
 
+    def lock_list(self, list_name):
+        lock_list = "GET " + list_name + " PW=" + self.password
+        if self.verify_list_name(list_name):
+            self.commands.append(lock_list)
+
+    def unlock_list(self, list_name):
+        unlock_list = "UNLOCK " + list_name + " PW=" + self.password
+        if self.verify_list_name(list_name):
+            self.commands.append(unlock_list)
+
     @staticmethod
     def verify_subscribers(subscribers):
         if len(subscribers) == 0:
