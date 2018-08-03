@@ -62,7 +62,8 @@ Just sharing incase someone wants to write some integration with EDW, Active Dir
     "script_enabled" : true,
     "listserv":
     {
-        "list_name" : "copitutest"     
+        "list_name" : "copitutest",
+        "lock_list" : true 
     },
     "sharepoint":
     {
