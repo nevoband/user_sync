@@ -171,7 +171,7 @@ class Employees:
                     self.listserv.unlock_list(ldap_group.settings['listserv']['list_name'])
                     self.listserv.delete_subscribers(off_board_employees, ldap_group.settings['listserv']['list_name'])
                     if 'lock_list' in ldap_group.settings['listserv'] and ldap_group.settings['listserv']['lock_list'] is True:
-                        self.listserv.lock_list(ldap_group['listserv']['list_name'])
+                        self.listserv.lock_list(ldap_group.settings['listserv']['list_name'])
                     self.listserv.update()
                 except Exception as e:
                     notifications.append("Failed to update listserv: " + str(e))
